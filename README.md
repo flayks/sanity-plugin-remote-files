@@ -6,6 +6,8 @@
   Useful for large videos, audio files, archives, PDFs or any file you want to keep in R2, S3 or another storage backend.
 </p>
 
+<img width="1920" height="1080" alt="plugin screenshot" src="https://github.com/user-attachments/assets/9571de44-9a96-451a-964c-6f78bd6354b7" />
+
 ## Features
 
 - **Remote files tool**: Browse, search, upload and manage your remote file library.
