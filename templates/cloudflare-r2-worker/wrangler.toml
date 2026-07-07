@@ -1,0 +1,12 @@
+name = "sanity-remote-files-r2"
+main = "src/index.ts"
+compatibility_date = "2026-07-06"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "sanity-remote-files"
+
+[vars]
+PUBLIC_URL = "https://example.r2.dev"
+ALLOWED_ORIGINS = "http://localhost:3333"
+UPLOAD_PREFIX = "uploads"
