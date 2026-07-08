@@ -27,7 +27,8 @@ export default {
       const file = form.get('file')
       if (!(file instanceof File)) return json({error: 'Missing file'}, 400, headers)
 
-      const prefix = safePrefix(String(form.get('prefix') || env.UPLOAD_PREFIX || 'uploads'))
+      const prefixValue = form.has('prefix') ? form.get('prefix') : env.UPLOAD_PREFIX || ''
+      const prefix = safePrefix(String(prefixValue || ''))
       const key = `${prefix}${Date.now()}-${safeName(file.name)}`
       await env.BUCKET.put(key, file.stream(), {httpMetadata: {contentType: file.type}})
 

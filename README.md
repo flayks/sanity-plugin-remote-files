@@ -55,7 +55,7 @@ export default defineConfig({
           id: 'r2',
           endpoint: process.env.SANITY_STUDIO_R2_ENDPOINT,
           publicUrl: process.env.SANITY_STUDIO_R2_PUBLIC_URL,
-          uploadPrefix: 'uploads',
+          uploadPrefix: '',
           headers: {
             authorization: `Bearer ${process.env.SANITY_STUDIO_R2_TOKEN}`,
           },

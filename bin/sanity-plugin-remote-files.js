@@ -180,7 +180,7 @@ async function setupR2(target) {
   }
 
   const origins = await input('Allowed origins (comma-separated):', 'http://localhost:3333')
-  const uploadPrefix = await input('Upload prefix:', 'uploads')
+  const uploadPrefix = await input('Upload prefix:', '')
   const wranglerToml = join(target, 'wrangler.toml')
   writeWorkerConfig(wranglerToml, {bucketName, publicUrl, workerName, origins, uploadPrefix})
   success(`Config: worker=${workerName}, bucket=${bucketName}`)
