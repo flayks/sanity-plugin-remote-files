@@ -6,16 +6,18 @@ import {DocumentIcon} from '@sanity/icons/Document'
 import {DownloadIcon} from '@sanity/icons/Download'
 import {ExpandIcon} from '@sanity/icons/Expand'
 import {HashIcon} from '@sanity/icons/Hash'
+import {ImageIcon} from '@sanity/icons/Image'
 import {LinkIcon} from '@sanity/icons/Link'
 import {ListIcon} from '@sanity/icons/List'
 import {TrashIcon} from '@sanity/icons/Trash'
-import {useEffect, useState} from 'react'
+import {UploadIcon} from '@sanity/icons/Upload'
+import {useEffect, useRef, useState} from 'react'
 import type {ComponentType, CSSProperties} from 'react'
 import {useClient} from 'sanity'
 import {IntentLink} from 'sanity/router'
 import type {RemoteFileDocument, RemoteFilesProvider} from '../types'
 import {deleteRemoteFile} from '../api'
-import {formatBytes, formatDate, formatDuration} from '../format'
+import {formatBytes, formatDate, formatDuration, isPreviewableVideo} from '../format'
 import {getRemoteMetadata} from '../metadata'
 import {FilePreview} from './FilePreview'
 
@@ -28,7 +30,7 @@ type FileDetailsDialogProps = {
   onUpdate?: (file: RemoteFileDocument) => void
 }
 
-type DialogTab = 'details' | 'usedBy'
+type DialogTab = 'details' | 'poster' | 'usedBy'
 
 type UsedByDocument = {
   _id: string
@@ -48,7 +50,7 @@ const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_
   "updatedAt": _updatedAt
 }`
 
-function InfoCard({code, icon: Icon, label, value}: {code?: boolean; icon: IconComponent; label: string; value?: string}) {
+function InfoCard({icon: Icon, label, value}: {icon: IconComponent; label: string; value?: string}) {
   return (
     <Card border padding={3} radius={2} tone="transparent" style={{backgroundColor: 'transparent'}}>
       <Flex align="flex-start" gap={3}>
@@ -57,34 +59,39 @@ function InfoCard({code, icon: Icon, label, value}: {code?: boolean; icon: IconC
           <Text muted size={1} weight="semibold">
             {label}
           </Text>
-          {code && value ? (
-            <Tooltip
-              content={<Text size={1} style={{maxWidth: 520, overflowWrap: 'anywhere'}}>{value}</Text>}
-              placement="top"
-              portal
-            >
-              <code
-                style={{
-                  display: 'block',
-                  fontSize: 'inherit',
-                  lineHeight: 1,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  width: '100%',
-                }}
-              >
-                {value}
-              </code>
-            </Tooltip>
-          ) : (
-            <Text size={1} style={{lineHeight: 1.35, overflowWrap: 'anywhere'}}>
-              {value || 'Unknown'}
-            </Text>
-          )}
+          <Text size={1} style={{lineHeight: 1.35, overflowWrap: 'anywhere'}}>
+            {value || 'Unknown'}
+          </Text>
         </Stack>
       </Flex>
     </Card>
+  )
+}
+
+function InfoRow({icon: Icon, label, value}: {icon: IconComponent; label: string; value: string}) {
+  return (
+    <Flex align="flex-start" gap={3}>
+      <Icon style={{width: 20, height: 20}} />
+      <Stack gap={2} flex={1}>
+        <Text muted size={1} weight="semibold">
+          {label}
+        </Text>
+        <Tooltip content={<Text size={1} style={{maxWidth: 520, overflowWrap: 'anywhere'}}>{value}</Text>} placement="top" portal>
+          <code
+            style={{
+              display: 'block',
+              fontSize: 'inherit',
+              lineHeight: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {value}
+          </code>
+        </Tooltip>
+      </Stack>
+    </Flex>
   )
 }
 
@@ -332,8 +339,6 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
                 <InfoCard icon={DocumentIcon} label="File type" value={file.contentType || 'Unknown type'} />
                 {formattedDuration && <InfoCard icon={ClockIcon} label="Duration" value={formattedDuration} />}
                 {dimensions && <InfoCard icon={ExpandIcon} label="Dimensions" value={dimensions} />}
-                <InfoCard code icon={LinkIcon} label="URL" value={file.url} />
-                <InfoCard code icon={HashIcon} label="Storage key" value={file.key} />
               </Grid>
 
               <Stack gap={2}>
@@ -350,6 +355,11 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
                     value={title}
                   />
                 </Box>
+              </Stack>
+
+              <Stack gap={3} style={{paddingBlock: '1em', borderBlock: '1px solid var(--card-border-color)'}}>
+                <InfoRow icon={LinkIcon} label="URL" value={file.url} />
+                <InfoRow icon={HashIcon} label="Storage key" value={file.key} />
               </Stack>
 
               <Flex align="center" gap={3} justify="space-between" wrap="wrap">
@@ -459,7 +469,7 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
                     >
                       <Card border padding={3} radius={2} tone="transparent" style={{backgroundColor: 'transparent', cursor: 'pointer'}}>
                         <Flex align="center" justify="space-between" gap={3} wrap="wrap">
-                          <Stack gap={2} flex={1}>
+                          <Stack gap={3} flex={1}>
                             <Text size={2} weight="semibold">
                               {document.name || document._id}
                             </Text>
