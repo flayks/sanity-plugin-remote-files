@@ -20,6 +20,11 @@ export type RemoteFileDocument = {
   _type: 'remoteFiles.file'
   title?: string
   description?: string
+  poster?: {
+    _type: 'image'
+    asset?: ReferenceValue
+  }
+  posterUrl?: string
   filename: string
   key: string
   url: string

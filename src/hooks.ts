@@ -16,7 +16,7 @@ export type UploadProgress = {
  * Keep in sync with the `remoteFiles.file` schema fields.
  */
 export const REMOTE_FILE_PROJECTION =
-  '{_id, _type, title, description, filename, key, url, provider, contentType, duration, height, size, uploadedAt, width}'
+  '{_id, _type, title, description, poster, "posterUrl": poster.asset->url, filename, key, url, provider, contentType, duration, height, size, uploadedAt, width}'
 
 /**
  * Upload a file to the provider and create a Sanity document for it.

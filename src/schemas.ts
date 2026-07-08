@@ -14,6 +14,13 @@ export const remoteFileDocument = defineType({
     defineField({name: 'title', title: 'Title', type: 'string'}),
     defineField({name: 'description', title: 'Description', type: 'text'}),
     defineField({
+      name: 'poster',
+      title: 'Poster',
+      type: 'image',
+      description: "A lightweight preview image, usually the video's first frame, shown before playback starts.",
+      hidden: ({document}) => !String(document?.contentType || '').startsWith('video/'),
+    }),
+    defineField({
       name: 'filename',
       title: 'Filename',
       type: 'string',

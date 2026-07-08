@@ -96,9 +96,12 @@ function InfoCard({code, icon: Icon, label, value}: {code?: boolean; icon: IconC
 export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, onUpdate}: FileDetailsDialogProps) {
   const client = useClient({apiVersion: '2025-01-01'})
   const toast = useToast()
+  const posterInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState<DialogTab>('details')
   const [deleting, setDeleting] = useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [posterUploading, setPosterUploading] = useState(false)
+  const [posterUrl, setPosterUrl] = useState(file.posterUrl)
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState(file.title || '')
   const [duration, setDuration] = useState<number | undefined>(file.duration)
@@ -109,10 +112,13 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
   const [width, setWidth] = useState<number | undefined>(file.width)
   const formattedDuration = formatDuration(duration)
   const dimensions = width && height ? `${width} x ${height}` : undefined
+  const isVideo = isPreviewableVideo(file.contentType)
 
   useEffect(() => {
     setTitle(file.title || '')
-  }, [file._id, file.title])
+    setPosterUrl(file.posterUrl)
+    if (!isPreviewableVideo(file.contentType)) setActiveTab('details')
+  }, [file._id, file.contentType, file.posterUrl, file.title])
 
   // Best-effort: probe metadata from the remote URL if not stored yet.
   // If successful, persist it so it doesn't need to be probed again.
@@ -212,6 +218,52 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
     toast.push({status: 'success', title: 'URL copied'})
   }
 
+  async function handlePosterUpload(nextPoster: File) {
+    if (!nextPoster.type.startsWith('image/')) {
+      toast.push({status: 'error', title: 'Poster must be an image'})
+      return
+    }
+
+    setPosterUploading(true)
+    try {
+      const asset = await client.assets.upload('image', nextPoster, {filename: nextPoster.name})
+      const updated = (await client
+        .patch(file._id)
+        .set({poster: {_type: 'image', asset: {_type: 'reference', _ref: asset._id}}})
+        .commit()) as RemoteFileDocument
+
+      setPosterUrl(asset.url)
+      onUpdate?.({...updated, posterUrl: asset.url})
+      toast.push({status: 'success', title: 'Poster saved'})
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Could not save poster',
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setPosterUploading(false)
+    }
+  }
+
+  async function handleRemovePoster() {
+    setPosterUploading(true)
+    try {
+      const updated = (await client.patch(file._id).unset(['poster']).commit()) as RemoteFileDocument
+      setPosterUrl(undefined)
+      onUpdate?.({...updated, posterUrl: undefined})
+      toast.push({status: 'success', title: 'Poster removed'})
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Could not remove poster',
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setPosterUploading(false)
+    }
+  }
+
   async function handleDelete() {
     if (!provider) return
     setDeleting(true)
@@ -248,6 +300,16 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
               onClick={() => setActiveTab('details')}
               selected={activeTab === 'details'}
             />
+            {isVideo && (
+              <Tab
+                aria-controls="remote-file-poster-panel"
+                icon={ImageIcon}
+                id="remote-file-poster-tab"
+                label="Poster"
+                onClick={() => setActiveTab('poster')}
+                selected={activeTab === 'poster'}
+              />
+            )}
             <Tab
               aria-controls="remote-file-used-by-panel"
               icon={LinkIcon}
@@ -313,6 +375,65 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
               </Flex>
             </Stack>
           </TabPanel>
+
+          {isVideo && <TabPanel
+            aria-labelledby="remote-file-poster-tab"
+            hidden={activeTab !== 'poster'}
+            id="remote-file-poster-panel"
+          >
+            <Stack gap={4} paddingTop={2}>
+              <Stack gap={2}>
+                <Text size={1} weight="semibold">
+                  Poster image
+                </Text>
+                <Text muted size={1}>
+                  A lightweight preview image displayed before playback starts, usually the video's first frame.
+                </Text>
+              </Stack>
+
+              {posterUrl && (
+                <Card border radius={2} overflow="hidden" style={{maxWidth: 280}}>
+                  <img
+                    alt={`Poster for ${file.title || file.filename}`}
+                    src={posterUrl}
+                    style={{display: 'block', maxHeight: 180, objectFit: 'contain', width: '100%'}}
+                  />
+                </Card>
+              )}
+
+              <input
+                accept="image/*"
+                hidden
+                onChange={(event) => {
+                  const nextPoster = event.currentTarget.files?.[0]
+                  event.currentTarget.value = ''
+                  if (nextPoster) void handlePosterUpload(nextPoster)
+                }}
+                ref={posterInputRef}
+                type="file"
+              />
+
+              <Flex gap={2} wrap="wrap">
+                <Button
+                  icon={UploadIcon}
+                  loading={posterUploading}
+                  onClick={() => posterInputRef.current?.click()}
+                  text={posterUrl ? 'Replace poster' : 'Upload poster'}
+                  tone={posterUrl ? 'default' : 'primary'}
+                />
+                {posterUrl && (
+                  <Button
+                    icon={TrashIcon}
+                    loading={posterUploading}
+                    mode="ghost"
+                    onClick={handleRemovePoster}
+                    text="Remove poster"
+                    tone="critical"
+                  />
+                )}
+              </Flex>
+            </Stack>
+          </TabPanel>}
 
           <TabPanel
             aria-labelledby="remote-file-used-by-tab"
