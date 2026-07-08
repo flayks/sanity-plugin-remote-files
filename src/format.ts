@@ -1,10 +1,12 @@
-/** Human-readable byte size, e.g. `6.1 MB`. */
+/** Human-readable byte size, e.g. `6.12mb` or `645.3kb`. */
 export function formatBytes(value?: number): string {
-  if (!value) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  if (!value) return '0b'
+  const units = ['b', 'kb', 'mb', 'gb', 'tb']
   const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1)
   const amount = value / 1024 ** index
-  return `${amount >= 10 || index === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[index]}`
+  const decimals = index === 0 ? 0 : index === 1 ? 1 : 2
+
+  return `${amount.toFixed(decimals)}${units[index]}`
 }
 
 /** Short locale date and time, e.g. `Jul 6, 2026, 2:30 PM`. */
