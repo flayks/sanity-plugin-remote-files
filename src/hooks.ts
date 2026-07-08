@@ -16,7 +16,7 @@ export type UploadProgress = {
  * Keep in sync with the `remoteFiles.file` schema fields.
  */
 export const REMOTE_FILE_PROJECTION =
-  '{_id, _type, title, description, filename, key, url, provider, contentType, duration, size, uploadedAt}'
+  '{_id, _type, title, description, filename, key, url, provider, contentType, duration, height, size, uploadedAt, width}'
 
 /**
  * Upload a file to the provider and create a Sanity document for it.
@@ -35,7 +35,7 @@ export function useRemoteFileUpload(provider?: RemoteFilesProvider) {
     setUploading(true)
     setUploadProgress({fileName: file.name, progress: provider.uploadFile ? undefined : 0, stage: 'uploading'})
     try {
-      // Upload to provider and extract client-side metadata (duration) in parallel
+      // Upload to provider and extract client-side metadata in parallel
       const [result, metadata] = await Promise.all([
         uploadRemoteFile(provider, file, (progress) => {
           setUploadProgress({fileName: file.name, progress, stage: 'uploading'})
@@ -47,14 +47,16 @@ export function useRemoteFileUpload(provider?: RemoteFilesProvider) {
       const document = (await client.create({
         _type: 'remoteFiles.file',
         title: result.filename,
-        ...metadata,
+        duration: result.duration ?? metadata.duration,
         filename: result.filename,
+        height: result.height ?? metadata.height,
         key: result.key,
         url: result.url,
         provider: provider.id,
         contentType: result.contentType || file.type,
         size: result.size || file.size,
         uploadedAt: new Date().toISOString(),
+        width: result.width ?? metadata.width,
       })) as RemoteFileDocument
 
       toast.push({status: 'success', title: 'File uploaded'})

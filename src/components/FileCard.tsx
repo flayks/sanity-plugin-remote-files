@@ -1,14 +1,14 @@
 import {Button, Card, Flex, Stack, Text} from '@sanity/ui'
+import {CalendarIcon} from '@sanity/icons/Calendar'
+import {CheckmarkIcon} from '@sanity/icons/Checkmark'
+import {ClockIcon} from '@sanity/icons/Clock'
+import {CloseIcon} from '@sanity/icons/Close'
+import {DownloadIcon} from '@sanity/icons/Download'
+import {EyeOpenIcon} from '@sanity/icons/EyeOpen'
 import type {RemoteFileDocument} from '../types'
 import {formatBytes, formatDate, formatDuration} from '../format'
 import {useDurationFallback} from '../hooks'
 import {FilePreview} from './FilePreview'
-import {CalendarIcon} from '@sanity/icons/Calendar'
-import {ClockIcon} from '@sanity/icons/Clock'
-import {DownloadIcon} from '@sanity/icons/Download'
-import {EyeOpenIcon} from '@sanity/icons/EyeOpen'
-import {CheckmarkIcon} from '@sanity/icons/Checkmark'
-import {CloseIcon} from '@sanity/icons/Close'
 
 type FileCardProps = {
   file: RemoteFileDocument
@@ -43,7 +43,7 @@ export function FileCard({file, onOpen, onRemoveSelected, onSelect, selected}: F
         <Text size={2} weight="semibold" textOverflow="ellipsis">
           {file.title || file.filename}
         </Text>
-        <Flex gap={3} wrap="wrap">
+        <Flex wrap="wrap" style={{ gap: '0.5rem 0.75rem' }}>
           {duration && (
             <Flex align="center" gap={1}>
               <ClockIcon />
@@ -90,7 +90,13 @@ export function FileCard({file, onOpen, onRemoveSelected, onSelect, selected}: F
               tone="positive"
             />
           ) : null}
-          <Button icon={EyeOpenIcon} mode="ghost" onClick={() => onOpen(file)} text="Details" />
+          <Button
+            icon={EyeOpenIcon}
+            mode="ghost"
+            onClick={() => onOpen(file)}
+            style={{flex: onSelect ? undefined : '1 1 auto'}}
+            text="Details"
+          />
         </Flex>
       </Stack>
     </Card>

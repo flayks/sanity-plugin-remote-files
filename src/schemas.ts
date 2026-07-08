@@ -44,6 +44,18 @@ export const remoteFileDocument = defineType({
       type: 'number',
       description: 'Duration in seconds, for video and audio files.',
     }),
+    defineField({
+      name: 'width',
+      title: 'Width',
+      type: 'number',
+      description: 'Intrinsic width in pixels, for image and video files.',
+    }),
+    defineField({
+      name: 'height',
+      title: 'Height',
+      type: 'number',
+      description: 'Intrinsic height in pixels, for image and video files.',
+    }),
     defineField({name: 'size', title: 'Size', type: 'number'}),
     defineField({name: 'uploadedAt', title: 'Uploaded at', type: 'datetime'}),
   ],

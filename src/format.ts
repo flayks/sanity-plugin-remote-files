@@ -7,10 +7,10 @@ export function formatBytes(value?: number): string {
   return `${amount >= 10 || index === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[index]}`
 }
 
-/** Short locale date, e.g. `Jul 6, 2026`. */
+/** Short locale date and time, e.g. `Jul 6, 2026, 2:30 PM`. */
 export function formatDate(value?: string): string {
   if (!value) return 'Unknown date'
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(new Date(value))
+  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value))
 }
 
 /**

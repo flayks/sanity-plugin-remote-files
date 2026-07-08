@@ -166,6 +166,9 @@ DELETE /files/:key  delete a stored object
   filename: string
   contentType?: string
   size?: number
+  duration?: number
+  width?: number
+  height?: number
 }
 ```
 
@@ -198,6 +201,8 @@ Files are stored as `remoteFiles.file` documents. A `remoteFile` field stores a 
       provider,
       contentType,
       duration,
+      width,
+      height,
       size,
       uploadedAt
     }
@@ -216,6 +221,8 @@ For a cleaner frontend projection:
     url,
     contentType,
     duration,
+    width,
+    height,
     size
   }
 }
