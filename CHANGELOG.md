@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.2.0...v0.3.0) (2026-07-08)
+
+
+### Features
+
+* add poster requirement option ([f28de48](https://github.com/flayks/sanity-plugin-remote-files/commit/f28de4869575300e01ccbe995ed433249b39b7b4))
+
 # [0.2.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.1.0...v0.2.0) (2026-07-08)
 
 
