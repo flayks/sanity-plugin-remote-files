@@ -27,6 +27,35 @@ export function formatDuration(value?: number): string | undefined {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+type FileInfoValue = {
+  contentType?: string
+  duration?: number
+  height?: number
+  size?: number
+  uploadedAt?: string
+  width?: number
+}
+
+/** Formatted file metadata parts used by cards and one-line summaries. */
+export function formatFileInfoParts(file: FileInfoValue) {
+  return {
+    contentType: file.contentType || 'Remote file',
+    dimensions: file.width && file.height ? `${file.width} x ${file.height}` : undefined,
+    duration: formatDuration(file.duration),
+    size: formatBytes(file.size),
+    uploadedAt: formatDate(file.uploadedAt),
+  }
+}
+
+/** One-line file metadata, e.g. `video/mp4 · 0:07 · 1920 x 1080 · 6.1 MB · Jul 6, 2026, 9:37 PM`. */
+export function formatFileInfo(file: FileInfoValue): string {
+  const info = formatFileInfoParts(file)
+
+  return [info.contentType, info.duration, info.dimensions, info.size, info.uploadedAt]
+    .filter(Boolean)
+    .join(' · ')
+}
+
 /** True if the content type is a previewable image. */
 export function isPreviewableImage(contentType?: string): boolean {
   return Boolean(contentType?.startsWith('image/'))

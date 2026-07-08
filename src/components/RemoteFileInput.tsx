@@ -5,7 +5,7 @@ import {UploadIcon} from '@sanity/icons/Upload'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {set, unset, useClient} from 'sanity'
 import type {RemoteFileDocument, RemoteFileFieldOptions, RemoteFileInputProps} from '../types'
-import {formatBytes, formatDate, formatDuration} from '../format'
+import {formatFileInfo, isPreviewableVideo} from '../format'
 import {REMOTE_FILE_PROJECTION, useRemoteFileUpload} from '../hooks'
 import {matchesAccept} from '../accept'
 import {FilePreview} from './FilePreview'
@@ -27,7 +27,6 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
   const [file, setFile] = useState<RemoteFileDocument | null>(null)
   const [browserOpen, setBrowserOpen] = useState(false)
   const {upload, uploading} = useRemoteFileUpload(provider)
-  const dimensions = file?.width && file.height ? `${file.width} x ${file.height}` : undefined
 
   // Fetch the referenced file document when the value changes
   useEffect(() => {
@@ -83,9 +82,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
               {file.title || file.filename}
             </Text>
             <Text muted size={1}>
-              {[file.contentType || 'Remote file', formatDuration(file.duration), dimensions, formatBytes(file.size), formatDate(file.uploadedAt)]
-                .filter(Boolean)
-                .join(' · ')}
+              {formatFileInfo(file)}
             </Text>
             <Flex gap={2} wrap="wrap">
               <Button disabled={readOnly} icon={UploadIcon} loading={uploading} mode="ghost" onClick={() => inputRef.current?.click()} text="Upload" />

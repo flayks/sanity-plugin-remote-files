@@ -17,7 +17,7 @@ import {useClient} from 'sanity'
 import {IntentLink} from 'sanity/router'
 import type {RemoteFileDocument, RemoteFilesProvider} from '../types'
 import {deleteRemoteFile} from '../api'
-import {formatBytes, formatDate, formatDuration, isPreviewableVideo} from '../format'
+import {formatDate, formatFileInfo, formatFileInfoParts, isPreviewableVideo} from '../format'
 import {getRemoteMetadata} from '../metadata'
 import {FilePreview} from './FilePreview'
 
@@ -117,8 +117,7 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
   const [usedByLoading, setUsedByLoading] = useState(false)
   const [usedByLoaded, setUsedByLoaded] = useState(false)
   const [width, setWidth] = useState<number | undefined>(file.width)
-  const formattedDuration = formatDuration(duration)
-  const dimensions = width && height ? `${width} x ${height}` : undefined
+  const fileInfo = formatFileInfoParts({...file, duration, height, width})
   const isVideo = isPreviewableVideo(file.contentType)
 
   useEffect(() => {
@@ -334,11 +333,11 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
           >
             <Stack gap={4} paddingTop={2}>
               <Grid gridTemplateColumns={[1, 1, 2]} gap={2}>
-                <InfoCard icon={CalendarIcon} label="Upload date" value={formatDate(file.uploadedAt)} />
-                <InfoCard icon={DownloadIcon} label="File size" value={formatBytes(file.size)} />
-                <InfoCard icon={DocumentIcon} label="File type" value={file.contentType || 'Unknown type'} />
-                {formattedDuration && <InfoCard icon={ClockIcon} label="Duration" value={formattedDuration} />}
-                {dimensions && <InfoCard icon={ExpandIcon} label="Dimensions" value={dimensions} />}
+                <InfoCard icon={CalendarIcon} label="Upload date" value={fileInfo.uploadedAt} />
+                <InfoCard icon={DownloadIcon} label="File size" value={fileInfo.size} />
+                <InfoCard icon={DocumentIcon} label="File type" value={fileInfo.contentType} />
+                {fileInfo.duration && <InfoCard icon={ClockIcon} label="Duration" value={fileInfo.duration} />}
+                {fileInfo.dimensions && <InfoCard icon={ExpandIcon} label="Dimensions" value={fileInfo.dimensions} />}
               </Grid>
 
               <Stack gap={2}>
