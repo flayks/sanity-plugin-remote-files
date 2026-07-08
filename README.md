@@ -82,6 +82,7 @@ export const page = defineType({
       type: 'remoteFile',
       options: {
         // accept: 'video/*', // limit to videos only
+        // requirePoster: true, // require a poster when the selected file is a video
         provider: 'r2', // specify the provider id to use
       },
     }),
@@ -133,6 +134,7 @@ Main plugin function. Adds the `remoteFiles.file` document type, the `remoteFile
 
 - `accept?: string` - value passed to the native file input, for example `'video/*'` or `'.pdf'`.
 - `provider?: string` - provider id to use for this field. If omitted, the first provider is used.
+- `requirePoster?: boolean` - require a poster when this field references a video file. Default: `false`.
 
 Provider ids are stored on file documents and make multiple instances possible:
 

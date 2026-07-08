@@ -17,13 +17,15 @@ import {useClient} from 'sanity'
 import {IntentLink} from 'sanity/router'
 import type {RemoteFileDocument, RemoteFilesProvider} from '../types'
 import {deleteRemoteFile} from '../api'
-import {formatBytes, formatDate, formatDuration, isPreviewableVideo} from '../format'
+import {formatDate, formatFileInfo, formatFileInfoParts, isPreviewableVideo} from '../format'
 import {getRemoteMetadata} from '../metadata'
 import {FilePreview} from './FilePreview'
 
 type FileDetailsDialogProps = {
   file: RemoteFileDocument
+  initialTab?: DialogTab
   provider?: RemoteFilesProvider
+  requirePoster?: boolean
   onClose: () => void
   onDelete?: (file: RemoteFileDocument) => Promise<void>
   onSelect?: (file: RemoteFileDocument) => void
@@ -49,6 +51,10 @@ const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_
   "name": coalesce(name, title, heading, _id),
   "updatedAt": _updatedAt
 }`
+
+function PosterMissingIcon() {
+  return <ImageIcon style={{color: 'var(--card-badge-critical-fg-color)'}} />
+}
 
 function InfoCard({icon: Icon, label, value}: {icon: IconComponent; label: string; value?: string}) {
   return (
@@ -100,11 +106,11 @@ function InfoRow({icon: Icon, label, value}: {icon: IconComponent; label: string
  * Shows metadata, lets the editor set an internal title,
  * and provides download/copy/delete/select actions.
  */
-export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, onUpdate}: FileDetailsDialogProps) {
+export function FileDetailsDialog({file, initialTab, provider, requirePoster, onClose, onDelete, onSelect, onUpdate}: FileDetailsDialogProps) {
   const client = useClient({apiVersion: '2025-01-01'})
   const toast = useToast()
   const posterInputRef = useRef<HTMLInputElement>(null)
-  const [activeTab, setActiveTab] = useState<DialogTab>('details')
+  const [activeTab, setActiveTab] = useState<DialogTab>(initialTab || 'details')
   const [deleting, setDeleting] = useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [posterUploading, setPosterUploading] = useState(false)
@@ -117,9 +123,9 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
   const [usedByLoading, setUsedByLoading] = useState(false)
   const [usedByLoaded, setUsedByLoaded] = useState(false)
   const [width, setWidth] = useState<number | undefined>(file.width)
-  const formattedDuration = formatDuration(duration)
-  const dimensions = width && height ? `${width} x ${height}` : undefined
+  const fileInfo = formatFileInfoParts({...file, duration, height, width})
   const isVideo = isPreviewableVideo(file.contentType)
+  const isPosterMissing = Boolean(requirePoster && isVideo && !posterUrl)
 
   useEffect(() => {
     setTitle(file.title || '')
@@ -310,9 +316,9 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
             {isVideo && (
               <Tab
                 aria-controls="remote-file-poster-panel"
-                icon={ImageIcon}
+                icon={isPosterMissing ? PosterMissingIcon : ImageIcon}
                 id="remote-file-poster-tab"
-                label="Poster"
+                label={isPosterMissing ? <span style={{color: 'var(--card-badge-critical-fg-color)'}}>Poster missing</span> : 'Poster'}
                 onClick={() => setActiveTab('poster')}
                 selected={activeTab === 'poster'}
               />
@@ -334,11 +340,11 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
           >
             <Stack gap={4} paddingTop={2}>
               <Grid gridTemplateColumns={[1, 1, 2]} gap={2}>
-                <InfoCard icon={CalendarIcon} label="Upload date" value={formatDate(file.uploadedAt)} />
-                <InfoCard icon={DownloadIcon} label="File size" value={formatBytes(file.size)} />
-                <InfoCard icon={DocumentIcon} label="File type" value={file.contentType || 'Unknown type'} />
-                {formattedDuration && <InfoCard icon={ClockIcon} label="Duration" value={formattedDuration} />}
-                {dimensions && <InfoCard icon={ExpandIcon} label="Dimensions" value={dimensions} />}
+                <InfoCard icon={CalendarIcon} label="Upload date" value={fileInfo.uploadedAt} />
+                <InfoCard icon={DownloadIcon} label="File size" value={fileInfo.size} />
+                <InfoCard icon={DocumentIcon} label="File type" value={fileInfo.contentType} />
+                {fileInfo.duration && <InfoCard icon={ClockIcon} label="Duration" value={fileInfo.duration} />}
+                {fileInfo.dimensions && <InfoCard icon={ExpandIcon} label="Dimensions" value={fileInfo.dimensions} />}
               </Grid>
 
               <Stack gap={2}>
@@ -400,6 +406,12 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
                   A lightweight preview image displayed before playback starts, usually the video's first frame.
                 </Text>
               </Stack>
+
+              {isPosterMissing && (
+                <Card border padding={3} radius={2} tone="critical">
+                  <Text size={1}>This video does not have a poster yet.</Text>
+                </Card>
+              )}
 
               {posterUrl && (
                 <Card border radius={2} overflow="hidden" style={{maxWidth: 280}}>
