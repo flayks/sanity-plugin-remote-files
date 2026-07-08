@@ -28,7 +28,7 @@ export function cloudflareR2Provider(config: CloudflareR2ProviderConfig): Remote
   return createRemoteFilesProvider(
     {
       ...providerConfig,
-      uploadFields: uploadPrefix ? {prefix: uploadPrefix} : undefined,
+      uploadFields: {prefix: uploadPrefix || ''},
     },
     {title: 'Cloudflare R2'},
   )

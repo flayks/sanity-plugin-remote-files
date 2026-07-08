@@ -27,6 +27,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
   const [file, setFile] = useState<RemoteFileDocument | null>(null)
   const [browserOpen, setBrowserOpen] = useState(false)
   const {upload, uploading} = useRemoteFileUpload(provider)
+  const dimensions = file?.width && file.height ? `${file.width} x ${file.height}` : undefined
 
   // Fetch the referenced file document when the value changes
   useEffect(() => {
@@ -82,7 +83,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
               {file.title || file.filename}
             </Text>
             <Text muted size={1}>
-              {[file.contentType || 'Remote file', formatDuration(file.duration), formatBytes(file.size), formatDate(file.uploadedAt)]
+              {[file.contentType || 'Remote file', formatDuration(file.duration), dimensions, formatBytes(file.size), formatDate(file.uploadedAt)]
                 .filter(Boolean)
                 .join(' · ')}
             </Text>

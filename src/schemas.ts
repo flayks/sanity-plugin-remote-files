@@ -14,6 +14,13 @@ export const remoteFileDocument = defineType({
     defineField({name: 'title', title: 'Title', type: 'string'}),
     defineField({name: 'description', title: 'Description', type: 'text'}),
     defineField({
+      name: 'poster',
+      title: 'Poster',
+      type: 'image',
+      description: "A lightweight preview image, usually the video's first frame, shown before playback starts.",
+      hidden: ({document}) => !String(document?.contentType || '').startsWith('video/'),
+    }),
+    defineField({
       name: 'filename',
       title: 'Filename',
       type: 'string',
@@ -43,6 +50,18 @@ export const remoteFileDocument = defineType({
       title: 'Duration',
       type: 'number',
       description: 'Duration in seconds, for video and audio files.',
+    }),
+    defineField({
+      name: 'width',
+      title: 'Width',
+      type: 'number',
+      description: 'Intrinsic width in pixels, for image and video files.',
+    }),
+    defineField({
+      name: 'height',
+      title: 'Height',
+      type: 'number',
+      description: 'Intrinsic height in pixels, for image and video files.',
     }),
     defineField({name: 'size', title: 'Size', type: 'number'}),
     defineField({name: 'uploadedAt', title: 'Uploaded at', type: 'datetime'}),

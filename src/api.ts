@@ -16,10 +16,15 @@ function parseUploadResponse(text: string): UploadResult {
   }
 }
 
+function getPublicUrl(provider: RemoteFilesProvider, key: string, fallback: string) {
+  if (!provider.publicUrl) return fallback
+  return `${provider.publicUrl.replace(/\/$/, '')}/${key.replace(/^\/+/, '')}`
+}
+
 /**
  * Upload a file to the provider's endpoint.
  * The endpoint must accept multipart/form-data with a `file` field
- * and return `{ key, url, filename, contentType?, size? }`.
+ * and return `{ key, url, filename, contentType?, size?, duration?, width?, height? }`.
  */
 export async function uploadRemoteFile(
   provider: RemoteFilesProvider,
@@ -71,6 +76,7 @@ export async function uploadRemoteFile(
 
   return {
     ...result,
+    url: getPublicUrl(provider, result.key, result.url),
     // Fall back to client-side values if the endpoint omits them
     contentType: result.contentType || file.type,
     filename: result.filename || file.name,

@@ -20,14 +20,21 @@ export type RemoteFileDocument = {
   _type: 'remoteFiles.file'
   title?: string
   description?: string
+  poster?: {
+    _type: 'image'
+    asset?: ReferenceValue
+  }
+  posterUrl?: string
   filename: string
   key: string
   url: string
   provider: string
   contentType?: string
   duration?: number
+  height?: number
   size?: number
   uploadedAt?: string
+  width?: number
 }
 
 /** Response from the provider's `POST /upload` endpoint. */
@@ -37,7 +44,10 @@ export type UploadResult = {
   url: string
   filename: string
   contentType?: string
+  duration?: number
+  height?: number
   size?: number
+  width?: number
 }
 
 /** Upload progress callback, used by providers that can report browser upload progress. */

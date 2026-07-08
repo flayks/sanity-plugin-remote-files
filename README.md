@@ -1,12 +1,12 @@
 <h2 align="center">
-  Remote Files Plugin for Sanity
+  🌐  Remote Files Plugin for Sanity  🌐
 </h2>
 <p align="center">
   Upload, browse and reference files stored outside of Sanity Studio.<br/>
   Useful for large videos, audio files, archives, PDFs or any file you want to keep in R2, S3 or another storage backend.
 </p>
 
-<img width="1920" height="1080" alt="plugin screenshot" src="https://github.com/user-attachments/assets/9571de44-9a96-451a-964c-6f78bd6354b7" />
+<img width="1920" height="1080" alt="sanity plugin remote files" src="https://github.com/user-attachments/assets/bf795192-fb02-4d48-a95b-7d356ed19be0" />
 
 ## Features
 
@@ -46,16 +46,17 @@ export default defineConfig({
   // ...
   plugins: [
     remoteFiles({
-      tool: {
-        title: 'Videos',
-        description: 'Browser, upload and manage videos.',
-      },
+      // configure title and description for specific needs like hosting videos only
+      // tool: {
+      //   title: 'Videos',
+      //   description: 'Browser, upload and manage videos.',
+      // },
       providers: [
         cloudflareR2Provider({
-          id: 'r2',
+          id: 'r2', // unique id allowing to setup multiple providers
           endpoint: process.env.SANITY_STUDIO_R2_ENDPOINT,
           publicUrl: process.env.SANITY_STUDIO_R2_PUBLIC_URL,
-          uploadPrefix: 'uploads',
+          uploadPrefix: '', // 'uploads', 'videos', 'assets'…
           headers: {
             authorization: `Bearer ${process.env.SANITY_STUDIO_R2_TOKEN}`,
           },
@@ -66,7 +67,7 @@ export default defineConfig({
 })
 ```
 
-Then use the `remoteFile` field type in your schema:
+Then use the `remoteFile` field type in your schema, in this example for videos:
 
 ```ts
 import { defineField, defineType } from 'sanity'
@@ -80,8 +81,8 @@ export const page = defineType({
       title: 'Video',
       type: 'remoteFile',
       options: {
-        accept: 'video/*',
-        provider: 'r2',
+        // accept: 'video/*', // limit to videos only
+        provider: 'r2', // specify the provider id to use
       },
     }),
   ],
@@ -166,6 +167,9 @@ DELETE /files/:key  delete a stored object
   filename: string
   contentType?: string
   size?: number
+  duration?: number
+  width?: number
+  height?: number
 }
 ```
 
@@ -198,6 +202,8 @@ Files are stored as `remoteFiles.file` documents. A `remoteFile` field stores a 
       provider,
       contentType,
       duration,
+      width,
+      height,
       size,
       uploadedAt
     }
@@ -216,6 +222,8 @@ For a cleaner frontend projection:
     url,
     contentType,
     duration,
+    width,
+    height,
     size
   }
 }

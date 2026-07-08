@@ -22,7 +22,7 @@ app.post('/upload', upload.single('file'), async (request, response) => {
   if (!request.file) return response.status(400).json({error: 'Missing file'})
   const bucket = required('AWS_BUCKET')
   const publicUrl = required('PUBLIC_URL').replace(/\/$/, '')
-  const key = `${safePrefix(process.env.UPLOAD_PREFIX || 'uploads')}${Date.now()}-${safeName(request.file.originalname)}`
+  const key = `${safePrefix(process.env.UPLOAD_PREFIX || '')}${Date.now()}-${safeName(request.file.originalname)}`
 
   await client.send(new PutObjectCommand({
     Bucket: bucket,

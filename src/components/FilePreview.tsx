@@ -26,10 +26,21 @@ export function FilePreview({controls, file, fit = 'cover', height = 160}: FileP
   }
 
   if (isPreviewableVideo(file.contentType)) {
+    if (file.posterUrl && !controls) {
+      return (
+        <img
+          alt={file.title || file.filename}
+          src={file.posterUrl}
+          style={{background, display: 'block', height, objectFit: fit, width: '100%'}}
+        />
+      )
+    }
+
     return (
       <video
         controls={controls}
         muted
+        poster={file.posterUrl}
         playsInline
         preload={controls ? 'auto' : 'metadata'}
         src={file.url}
