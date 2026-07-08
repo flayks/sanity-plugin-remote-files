@@ -1,5 +1,12 @@
 import {defineField, defineType} from 'sanity'
 import {RemoteFileInput} from './components/RemoteFileInput'
+import type {RemoteFileFieldOptions, RemoteFileValue} from './types'
+
+function isVideoDocument(document: unknown) {
+  if (!document || typeof document !== 'object' || !('contentType' in document)) return false
+
+  return String(document.contentType || '').startsWith('video/')
+}
 
 /**
  * Document type for each uploaded remote file.
@@ -18,7 +25,7 @@ export const remoteFileDocument = defineType({
       title: 'Poster',
       type: 'image',
       description: "A lightweight preview image, usually the video's first frame, shown before playback starts.",
-      hidden: ({document}) => !String(document?.contentType || '').startsWith('video/'),
+      hidden: ({document}) => !isVideoDocument(document),
     }),
     defineField({
       name: 'filename',
@@ -95,6 +102,24 @@ export const remoteFileType = defineType({
       to: [{type: 'remoteFiles.file'}],
     }),
   ],
+  validation: (rule) =>
+    rule.custom(async (value, context) => {
+      const options = (context.type?.options || {}) as RemoteFileFieldOptions
+      if (!options.requirePoster) return true
+
+      const ref = (value as RemoteFileValue | undefined)?.asset?._ref
+      if (!ref) return true
+
+      const file = await context.getClient({apiVersion: '2025-01-01'}).fetch<{
+        contentType?: string
+        hasPoster?: boolean
+      } | null>(
+        '*[_id == $id][0]{contentType, "hasPoster": defined(poster.asset._ref)}',
+        {id: ref},
+      )
+
+      return !isVideoDocument(file) || file?.hasPoster ? true : 'A poster image is required for this video'
+    }),
   preview: {
     select: {title: 'asset.title', filename: 'asset.filename', subtitle: 'asset.contentType'},
     prepare(selection) {

@@ -23,7 +23,9 @@ import {FilePreview} from './FilePreview'
 
 type FileDetailsDialogProps = {
   file: RemoteFileDocument
+  initialTab?: DialogTab
   provider?: RemoteFilesProvider
+  requirePoster?: boolean
   onClose: () => void
   onDelete?: (file: RemoteFileDocument) => Promise<void>
   onSelect?: (file: RemoteFileDocument) => void
@@ -49,6 +51,10 @@ const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_
   "name": coalesce(name, title, heading, _id),
   "updatedAt": _updatedAt
 }`
+
+function PosterMissingIcon() {
+  return <ImageIcon style={{color: 'var(--card-badge-critical-fg-color)'}} />
+}
 
 function InfoCard({icon: Icon, label, value}: {icon: IconComponent; label: string; value?: string}) {
   return (
@@ -100,11 +106,11 @@ function InfoRow({icon: Icon, label, value}: {icon: IconComponent; label: string
  * Shows metadata, lets the editor set an internal title,
  * and provides download/copy/delete/select actions.
  */
-export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, onUpdate}: FileDetailsDialogProps) {
+export function FileDetailsDialog({file, initialTab, provider, requirePoster, onClose, onDelete, onSelect, onUpdate}: FileDetailsDialogProps) {
   const client = useClient({apiVersion: '2025-01-01'})
   const toast = useToast()
   const posterInputRef = useRef<HTMLInputElement>(null)
-  const [activeTab, setActiveTab] = useState<DialogTab>('details')
+  const [activeTab, setActiveTab] = useState<DialogTab>(initialTab || 'details')
   const [deleting, setDeleting] = useState(false)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [posterUploading, setPosterUploading] = useState(false)
@@ -119,6 +125,7 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
   const [width, setWidth] = useState<number | undefined>(file.width)
   const fileInfo = formatFileInfoParts({...file, duration, height, width})
   const isVideo = isPreviewableVideo(file.contentType)
+  const isPosterMissing = Boolean(requirePoster && isVideo && !posterUrl)
 
   useEffect(() => {
     setTitle(file.title || '')
@@ -309,9 +316,9 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
             {isVideo && (
               <Tab
                 aria-controls="remote-file-poster-panel"
-                icon={ImageIcon}
+                icon={isPosterMissing ? PosterMissingIcon : ImageIcon}
                 id="remote-file-poster-tab"
-                label="Poster"
+                label={isPosterMissing ? <span style={{color: 'var(--card-badge-critical-fg-color)'}}>Poster missing</span> : 'Poster'}
                 onClick={() => setActiveTab('poster')}
                 selected={activeTab === 'poster'}
               />
@@ -399,6 +406,12 @@ export function FileDetailsDialog({file, provider, onClose, onDelete, onSelect, 
                   A lightweight preview image displayed before playback starts, usually the video's first frame.
                 </Text>
               </Stack>
+
+              {isPosterMissing && (
+                <Card border padding={3} radius={2} tone="critical">
+                  <Text size={1}>This video does not have a poster yet.</Text>
+                </Card>
+              )}
 
               {posterUrl && (
                 <Card border radius={2} overflow="hidden" style={{maxWidth: 280}}>

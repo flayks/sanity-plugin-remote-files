@@ -97,6 +97,8 @@ export type RemoteFilesProvider = {
 export type RemoteFileFieldOptions = {
   accept?: string
   provider?: string
+  /** Require a poster image when this field references a video file. */
+  requirePoster?: boolean
 }
 
 /** Plugin configuration passed to `remoteFiles()`. */

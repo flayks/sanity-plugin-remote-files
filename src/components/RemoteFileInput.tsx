@@ -1,5 +1,6 @@
 import {Box, Button, Card, Dialog, Flex, Stack, Text, useToast} from '@sanity/ui'
 import {CloseIcon} from '@sanity/icons/Close'
+import {EyeOpenIcon} from '@sanity/icons/EyeOpen'
 import {SearchIcon} from '@sanity/icons/Search'
 import {UploadIcon} from '@sanity/icons/Upload'
 import {useEffect, useMemo, useRef, useState} from 'react'
@@ -8,6 +9,7 @@ import type {RemoteFileDocument, RemoteFileFieldOptions, RemoteFileInputProps} f
 import {formatFileInfo, isPreviewableVideo} from '../format'
 import {REMOTE_FILE_PROJECTION, useRemoteFileUpload} from '../hooks'
 import {matchesAccept} from '../accept'
+import {FileDetailsDialog} from './FileDetailsDialog'
 import {FilePreview} from './FilePreview'
 import {getProvider, useRemoteFilesProviders} from './ProviderContext'
 import {RemoteFilesBrowser} from './RemoteFilesBrowser'
@@ -26,7 +28,9 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<RemoteFileDocument | null>(null)
   const [browserOpen, setBrowserOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const {upload, uploading} = useRemoteFileUpload(provider)
+  const isPosterMissing = Boolean(options.requirePoster && file && isPreviewableVideo(file.contentType) && !file.posterUrl)
 
   // Fetch the referenced file document when the value changes
   useEffect(() => {
@@ -77,16 +81,22 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
       {file ? (
         <Card border radius={2} overflow="hidden">
           <FilePreview file={file} fit="contain" height={320} />
-          <Stack padding={3} gap={3}>
+          <Stack padding={4} gap={3}>
             <Text size={2} weight="semibold">
               {file.title || file.filename}
             </Text>
             <Text muted size={1}>
               {formatFileInfo(file)}
             </Text>
-            <Flex gap={2} wrap="wrap">
-              <Button disabled={readOnly} icon={UploadIcon} loading={uploading} mode="ghost" onClick={() => inputRef.current?.click()} text="Upload" />
+            <Flex gap={2} paddingTop={2} wrap="wrap">
               <Button disabled={readOnly} icon={SearchIcon} mode="ghost" onClick={() => setBrowserOpen(true)} text="Select" />
+              <Button
+                icon={EyeOpenIcon}
+                mode="ghost"
+                onClick={() => setDetailsOpen(true)}
+                text={isPosterMissing ? 'Poster missing' : 'Details'}
+                tone={isPosterMissing ? 'critical' : 'default'}
+              />
               <Button disabled={readOnly} icon={CloseIcon} mode="ghost" onClick={removeFile} text="Remove" tone="critical" />
             </Flex>
           </Stack>
@@ -98,7 +108,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
             <Text muted size={1}>
               Upload a new file or select one from the remote file library.
             </Text>
-            <Flex gap={2} wrap="wrap">
+            <Flex gap={2} paddingTop={2} wrap="wrap">
               <Button
                 disabled={readOnly || !provider}
                 icon={UploadIcon}
@@ -144,6 +154,18 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
             />
           </Box>
         </Dialog>
+      )}
+
+      {detailsOpen && file && (
+        <FileDetailsDialog
+          file={file}
+          initialTab={isPosterMissing ? 'poster' : 'details'}
+          onClose={() => setDetailsOpen(false)}
+          onDelete={async () => removeFile()}
+          onUpdate={setFile}
+          provider={getProvider(providers, file.provider)}
+          requirePoster={options.requirePoster}
+        />
       )}
     </Stack>
   )
