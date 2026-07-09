@@ -1,3 +1,10 @@
+## [0.3.2](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.3.1...v0.3.2) (2026-07-09)
+
+
+### Bug Fixes
+
+* only return format values if existing + uniformize file size ([78b9a8a](https://github.com/flayks/sanity-plugin-remote-files/commit/78b9a8af96d185ff3e3edc0daad83111e0b79213))
+
 ## [0.3.1](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.3.0...v0.3.1) (2026-07-09)
 
 # [0.3.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.2.0...v0.3.0) (2026-07-08)

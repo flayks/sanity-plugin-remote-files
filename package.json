@@ -1,6 +1,6 @@
 {
   "name": "sanity-plugin-remote-files",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Bring external file storage to Sanity Studio with uploads, previews and references.",
   "keywords": [
     "sanity",
