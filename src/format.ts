@@ -1,12 +1,12 @@
-/** Human-readable byte size, e.g. `6.12mb` or `645.3kb`. */
+/** Human-readable byte size, e.g. `6.12 MB` or `645.3 KB`. */
 export function formatBytes(value?: number): string {
-  if (!value) return '0b'
-  const units = ['b', 'kb', 'mb', 'gb', 'tb']
+  if (!Number.isFinite(value) || !value) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
   const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1)
   const amount = value / 1024 ** index
   const decimals = index === 0 ? 0 : index === 1 ? 1 : 2
 
-  return `${amount.toFixed(decimals)}${units[index]}`
+  return `${amount.toFixed(decimals)} ${units[index]}`
 }
 
 /** Short locale date and time, e.g. `Jul 6, 2026, 2:30 PM`. */
@@ -44,8 +44,8 @@ export function formatFileInfoParts(file: FileInfoValue) {
     contentType: file.contentType || 'Remote file',
     dimensions: file.width && file.height ? `${file.width} x ${file.height}` : undefined,
     duration: formatDuration(file.duration),
-    size: formatBytes(file.size),
-    uploadedAt: formatDate(file.uploadedAt),
+    size: file.size ? formatBytes(file.size) : undefined,
+    uploadedAt: file.uploadedAt ? formatDate(file.uploadedAt) : undefined,
   }
 }
 
