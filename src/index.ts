@@ -20,6 +20,16 @@ export type {
 } from './types'
 
 export {cloudflareR2Provider, createRemoteFilesProvider, s3Provider, signedUrlProvider}
+export {
+  formatBytes,
+  formatDate,
+  formatDuration,
+  formatFileInfo,
+  formatFileInfoParts,
+  isPreviewableAudio,
+  isPreviewableImage,
+  isPreviewableVideo,
+} from './format'
 export type {CloudflareR2ProviderConfig, RemoteFilesProviderConfig, S3ProviderConfig} from './providers/index'
 export type {SignedUploadUrlResult, SignedUrlProviderConfig} from './providers/index'
 

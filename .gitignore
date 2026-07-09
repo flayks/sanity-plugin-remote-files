@@ -58,3 +58,6 @@ yalc.lock
 
 # Compiled plugin
 dist
+
+# VS Code workspace files
+*.code-workspace
