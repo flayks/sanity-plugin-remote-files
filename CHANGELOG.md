@@ -1,3 +1,25 @@
+# [1.0.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.3.2...v1.0.0) (2026-09-12)
+
+
+* feat!: require a backend secret and add upload limits ([2175807](https://github.com/flayks/sanity-plugin-remote-files/commit/2175807dc32a033105c2f597de52d30345691a71))
+
+
+### Bug Fixes
+
+* preserve posters, order deletes and size the files grid ([8001ddf](https://github.com/flayks/sanity-plugin-remote-files/commit/8001ddf39bbc0149e703686b553249b93b587996))
+
+
+### Features
+
+* show file kind icons and play media from the field ([082ecf8](https://github.com/flayks/sanity-plugin-remote-files/commit/082ecf8db1e17a8cd6395f1b41b520936588f972))
+
+
+### BREAKING CHANGES
+
+* the R2 and S3 templates refuse to run without
+REMOTE_FILES_SECRET, and enforce MAX_UPLOAD_MB and ALLOWED_CONTENT_TYPES.
+The plugin now requires React 19 and Sanity 5 or 6.
+
 ## [0.3.2](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.3.1...v0.3.2) (2026-07-09)
 
 
