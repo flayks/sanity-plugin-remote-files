@@ -1,5 +1,6 @@
+import {deleteAtEndpoint, xhrUpload} from '../api'
+import type {RemoteFilesProvider} from '../types'
 import {createRemoteFilesProvider} from './createProvider'
-import type {RemoteFileDocument, RemoteFilesProvider, UploadResult} from '../types'
 
 /** Response expected from your signed URL endpoint. */
 /** @public */
@@ -42,7 +43,15 @@ export function signedUrlProvider(config: SignedUrlProviderConfig): RemoteFilesP
       headers,
       async uploadFile(file, {onProgress}) {
         const signed = await getSignedUploadUrl(getUploadUrlEndpoint, headers, file)
-        await uploadToSignedUrl(signed, file, onProgress)
+        await xhrUpload({
+          url: signed.uploadUrl,
+          body: file,
+          headers: signedUploadHeaders(signed, file),
+          method: signed.method || 'PUT',
+          timeout: config.timeout,
+          onProgress,
+          label: 'Signed upload',
+        })
 
         return {
           key: signed.key,
@@ -53,14 +62,7 @@ export function signedUrlProvider(config: SignedUrlProviderConfig): RemoteFilesP
         }
       },
       async deleteFile(file) {
-        const endpoint = deleteEndpoint.replace(/\/$/, '')
-        const response = await fetch(`${endpoint}/files/${encodeURIComponent(file.key)}`, {
-          method: 'DELETE',
-          headers,
-        })
-        if (!response.ok) {
-          throw new Error(`Delete failed at ${endpoint}/files/${file.key} (${response.status}). ${await response.text()}`)
-        }
+        return deleteAtEndpoint(deleteEndpoint, file.key, headers)
       },
     },
     {title: config.title || 'Signed URL'},
@@ -70,44 +72,27 @@ export function signedUrlProvider(config: SignedUrlProviderConfig): RemoteFilesP
 async function getSignedUploadUrl(endpoint: string, headers: HeadersInit | undefined, file: File) {
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: {'content-type': 'application/json', ...Object.fromEntries(new Headers(headers || {}).entries())},
+    headers: {
+      'content-type': 'application/json',
+      ...Object.fromEntries(new Headers(headers || {}).entries()),
+    },
     body: JSON.stringify({filename: file.name, contentType: file.type, size: file.size}),
   })
 
   if (!response.ok) {
-    throw new Error(`Could not get signed upload URL (${response.status}). ${await response.text()}`)
+    throw new Error(
+      `Could not get signed upload URL (${response.status}). ${await response.text()}`,
+    )
   }
 
-  return (await response.json()) as SignedUploadUrlResult
+  const signed: SignedUploadUrlResult = await response.json()
+  return signed
 }
 
-function uploadToSignedUrl(
-  signed: SignedUploadUrlResult,
-  file: File,
-  onProgress?: (progress: number) => void,
-) {
-  return new Promise<void>((resolve, reject) => {
-    const request = new XMLHttpRequest()
-
-    request.upload.onprogress = (event) => {
-      if (!event.lengthComputable) return
-      onProgress?.(Math.round((event.loaded / event.total) * 100))
-    }
-
-    request.onload = () => {
-      if (request.status < 200 || request.status >= 300) {
-        reject(new Error(`Signed upload failed (${request.status}). ${request.responseText}`))
-        return
-      }
-      resolve()
-    }
-
-    request.onerror = () => reject(new Error('Signed upload failed.'))
-    request.open(signed.method || 'PUT', signed.uploadUrl)
-    new Headers(signed.headers || {}).forEach((value, key) => request.setRequestHeader(key, value))
-    if (!signed.headers || !new Headers(signed.headers).has('content-type')) {
-      request.setRequestHeader('content-type', file.type || 'application/octet-stream')
-    }
-    request.send(file)
-  })
+function signedUploadHeaders(signed: SignedUploadUrlResult, file: File) {
+  const headers = new Headers(signed.headers || {})
+  if (!headers.has('content-type')) {
+    headers.set('content-type', file.type || 'application/octet-stream')
+  }
+  return headers
 }

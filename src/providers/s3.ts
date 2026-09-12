@@ -1,5 +1,5 @@
-import {createRemoteFilesProvider} from './createProvider'
 import type {RemoteFilesProvider} from '../types'
+import {createRemoteFilesProvider} from './createProvider'
 
 /**
  * Config for the S3 provider.

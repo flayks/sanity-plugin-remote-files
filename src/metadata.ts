@@ -27,12 +27,13 @@ function probeMetadata(src: string, contentType?: string): Promise<FileMetadata>
   return new Promise((resolve) => {
     if (isImage(contentType)) {
       const image = new Image()
-      image.onload = () =>
+      image.addEventListener('load', () =>
         resolve({
           height: image.naturalHeight || undefined,
           width: image.naturalWidth || undefined,
-        })
-      image.onerror = () => resolve({})
+        }),
+      )
+      image.addEventListener('error', () => resolve({}))
       image.src = src
       return
     }
@@ -46,7 +47,7 @@ function probeMetadata(src: string, contentType?: string): Promise<FileMetadata>
       ? document.createElement('audio')
       : document.createElement('video')
     el.preload = 'metadata'
-    el.onloadedmetadata = () => {
+    el.addEventListener('loadedmetadata', () => {
       const metadata: FileMetadata = {}
       if (Number.isFinite(el.duration)) metadata.duration = el.duration
       if (el instanceof HTMLVideoElement) {
@@ -54,8 +55,8 @@ function probeMetadata(src: string, contentType?: string): Promise<FileMetadata>
         metadata.width = el.videoWidth || undefined
       }
       resolve(metadata)
-    }
-    el.onerror = () => resolve({})
+    })
+    el.addEventListener('error', () => resolve({}))
     el.src = src
   })
 }
@@ -80,15 +81,4 @@ export async function getFileMetadata(file: File): Promise<FileMetadata> {
  */
 export function getRemoteMetadata(url: string, contentType?: string): Promise<FileMetadata> {
   return probeMetadata(url, contentType)
-}
-
-/**
- * Fetch duration from a remote URL for existing files that don't have
- * a stored `duration` value yet. Best-effort — returns undefined on failure.
- */
-export async function getRemoteDuration(
-  url: string,
-  contentType?: string,
-): Promise<number | undefined> {
-  return (await getRemoteMetadata(url, contentType)).duration
 }

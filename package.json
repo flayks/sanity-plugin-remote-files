@@ -3,112 +3,99 @@
   "version": "0.3.2",
   "description": "Bring external file storage to Sanity Studio with uploads, previews and references.",
   "keywords": [
-    "sanity",
-    "sanity-plugin",
-    "remote-files",
+    "cloudflare-r2",
     "external-files",
     "file-upload",
-    "cloudflare-r2",
-    "s3"
+    "remote-files",
+    "s3",
+    "sanity",
+    "sanity-plugin"
   ],
   "homepage": "https://github.com/flayks/sanity-plugin-remote-files#readme",
   "bugs": {
     "url": "https://github.com/flayks/sanity-plugin-remote-files/issues"
   },
+  "license": "MIT",
+  "author": "Félix Péault (Flayks) <hello@flayks.com>",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/flayks/sanity-plugin-remote-files.git"
   },
-  "license": "MIT",
-  "author": "Félix Péault (Flayks) <hello@flayks.com>",
-  "sideEffects": false,
-  "type": "module",
-  "types": "./dist/index.d.ts",
+  "bin": {
+    "sanity-plugin-remote-files": "./bin/sanity-plugin-remote-files.js"
+  },
   "files": [
     "bin",
-    "dist/index.d.ts",
-    "dist/index.js",
-    "dist/index.js.map",
-    "templates"
+    "dist",
+    "templates",
+    "!templates/**/node_modules"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/index.ts",
-      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "bin": {
-    "sanity-plugin-remote-files": "./bin/sanity-plugin-remote-files.js"
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json"
+    }
   },
   "scripts": {
     "build": "plugin-kit verify-package --silent && pkg-utils build --strict --check --clean",
+    "format": "oxfmt",
     "link-watch": "plugin-kit link-watch",
-    "format": "prettier --write --cache --ignore-unknown .",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "prepublishOnly": "npm run build",
     "setup:r2": "node ./bin/sanity-plugin-remote-files.js setup r2 ../remote-files-r2-worker",
     "setup:s3": "node ./bin/sanity-plugin-remote-files.js setup s3 ../remote-files-s3-api",
     "watch": "pkg-utils watch --strict"
   },
   "dependencies": {
-    "@sanity/icons": "^5.0.0",
-    "@sanity/ui": "^3.3.5"
+    "@sanity/icons": "^5.2.2",
+    "@sanity/ui": "^4.2.1"
   },
   "devDependencies": {
-    "@sanity/pkg-utils": "^10.9.1",
-    "@sanity/plugin-kit": "^6.0.4",
-    "@semantic-release/changelog": "^6.0.3",
+    "@sanity/browserslist-config": "^1.0.5",
+    "@sanity/pkg-utils": "^12.3.4",
+    "@sanity/plugin-kit": "^10.0.9",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.2",
-    "@semantic-release/npm": "^13.1.3",
-    "@semantic-release/release-notes-generator": "^14.1.0",
-    "@types/node": "^26.1.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.63.0",
-    "@typescript-eslint/parser": "^8.63.0",
-    "eslint": "^9",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-config-sanity": "^7.1.4",
-    "eslint-plugin-prettier": "^5.5.4",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "prettier": "^3.9.4",
-    "prettier-plugin-packagejson": "^3.0.2",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "sanity": "^6.4.0",
-    "semantic-release": "^25.0.2",
-    "styled-components": "^6.4.3",
-    "typescript": "^6.0.3"
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "sanity": "^6.13.2",
+    "semantic-release": "^25.0.9",
+    "styled-components": "^6.5.3",
+    "typescript": "^6"
   },
   "peerDependencies": {
-    "react": "^18 || ^19",
-    "react-dom": "^18 || ^19",
-    "sanity": "^3 || ^4 || ^5 || ^6",
-    "styled-components": "^6.0.0"
+    "react": "^19",
+    "sanity": "^5 || ^6"
   },
-  "engines": {
-    "node": ">=22.12"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "import": "./dist/index.js",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
+  "overrides": {
+    "oxfmt": "$oxfmt"
   },
   "browserslist": "extends @sanity/browserslist-config",
+  "engines": {
+    "node": ">=20.19 <22 || >=22.12"
+  },
   "sanityPlugin": {
     "verifyPackage": {
-      "eslintImports": false,
-      "nodeEngine": false,
-      "sanityV2Json": false
+      "tsconfig": false
     }
   }
 }

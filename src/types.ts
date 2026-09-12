@@ -88,6 +88,8 @@ export type RemoteFilesProvider = {
   headers?: HeadersInit
   /** Extra form fields sent with the default HTTP upload request. */
   uploadFields?: Record<string, string>
+  /** Upload timeout in milliseconds. No timeout by default. */
+  timeout?: number
   uploadFile?: RemoteFileUploadHandler
   deleteFile?: RemoteFileDeleteHandler
 }
