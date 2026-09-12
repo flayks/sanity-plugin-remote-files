@@ -61,3 +61,6 @@ dist
 
 # VS Code workspace files
 *.code-workspace
+
+# Template installs (scaffolding, users install their own)
+templates/*/package-lock.json

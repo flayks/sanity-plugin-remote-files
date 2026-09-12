@@ -1,16 +1,84 @@
-import type {RemoteFileDocument, RemoteFileUploadProgress, RemoteFilesProvider, UploadResult} from './types'
+import type {
+  RemoteFileDocument,
+  RemoteFileUploadProgress,
+  RemoteFilesProvider,
+  UploadResult,
+} from './types'
 
-function setRequestHeaders(request: XMLHttpRequest, headers?: HeadersInit) {
-  if (!headers) return
+type XhrUploadOptions = {
+  url: string
+  body: XMLHttpRequestBodyInit
+  headers?: HeadersInit
+  method?: string
+  timeout?: number
+  onProgress?: RemoteFileUploadProgress
+  /** Prefixes the error message of every failure mode. */
+  label: string
+}
 
-  new Headers(headers).forEach((value, key) => {
-    request.setRequestHeader(key, value)
+/**
+ * Upload a body with XMLHttpRequest, which unlike fetch() reports progress.
+ * Rejects on every terminal state, so a stalled request can never hang the UI.
+ */
+export function xhrUpload({
+  url,
+  body,
+  headers,
+  method = 'POST',
+  timeout,
+  onProgress,
+  label,
+}: XhrUploadOptions): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+
+    request.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) return
+      onProgress?.(Math.round((event.loaded / event.total) * 100))
+    })
+
+    request.addEventListener('load', () => {
+      if (request.status < 200 || request.status >= 300) {
+        reject(new Error(`${label} failed (${request.status}). ${request.responseText}`))
+        return
+      }
+      resolve(request.responseText)
+    })
+
+    request.addEventListener('error', () => reject(new Error(`${label} could not reach ${url}.`)))
+    request.addEventListener('timeout', () => reject(new Error(`${label} timed out.`)))
+    request.addEventListener('abort', () => reject(new Error(`${label} was cancelled.`)))
+
+    request.open(method, url)
+    if (timeout) request.timeout = timeout
+    if (headers) {
+      new Headers(headers).forEach((value, key) => {
+        request.setRequestHeader(key, value)
+      })
+    }
+    request.send(body)
   })
+}
+
+/** `DELETE <endpoint>/files/:key`, shared by the endpoint and signed URL flows. */
+export async function deleteAtEndpoint(endpoint: string, key: string, headers?: HeadersInit) {
+  const base = endpoint.replace(/\/$/, '')
+  const response = await fetch(`${base}/files/${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+    headers,
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Delete failed at ${base}/files/${key} (${response.status}). ${await response.text()}`,
+    )
+  }
 }
 
 function parseUploadResponse(text: string): UploadResult {
   try {
-    return JSON.parse(text) as UploadResult
+    const parsed: UploadResult = JSON.parse(text)
+    return parsed
   } catch {
     throw new Error('Upload endpoint returned invalid JSON.')
   }
@@ -44,35 +112,17 @@ export async function uploadRemoteFile(
   body.set('file', file)
   Object.entries(provider.uploadFields || {}).forEach(([key, value]) => body.set(key, value))
 
-  const result = await new Promise<UploadResult>((resolve, reject) => {
-    const request = new XMLHttpRequest()
-
-    request.upload.onprogress = (event) => {
-      if (!event.lengthComputable) return
-      onProgress?.(Math.round((event.loaded / event.total) * 100))
-    }
-
-    request.onload = () => {
-      if (request.status < 200 || request.status >= 300) {
-        reject(new Error(`Upload failed at ${endpoint}/upload (${request.status}). ${request.responseText}`))
-        return
-      }
-
-      try {
-        resolve(parseUploadResponse(request.responseText))
-      } catch (error) {
-        reject(error)
-      }
-    }
-
-    request.onerror = () => {
-      reject(new Error(`Could not reach remote files endpoint: ${endpoint}.`))
-    }
-
-    request.open('POST', `${endpoint}/upload`)
-    setRequestHeaders(request, provider.headers)
-    request.send(body)
+  const response = await xhrUpload({
+    url: `${endpoint}/upload`,
+    body,
+    headers: provider.headers,
+    timeout: provider.timeout,
+    onProgress,
+    label: 'Upload',
   })
+  const result = parseUploadResponse(response)
+
+  if (!result.key) throw new Error('Upload endpoint did not return a storage key.')
 
   return {
     ...result,
@@ -100,13 +150,5 @@ export async function deleteRemoteFile(
     )
   }
 
-  const endpoint = provider.endpoint.replace(/\/$/, '')
-  const response = await fetch(
-    `${endpoint}/files/${encodeURIComponent(file.key)}`,
-    {method: 'DELETE', headers: provider.headers},
-  )
-
-  if (!response.ok) {
-    throw new Error(`Delete failed at ${endpoint}/files/${file.key} (${response.status}). ${await response.text()}`)
-  }
+  return deleteAtEndpoint(provider.endpoint, file.key, provider.headers)
 }

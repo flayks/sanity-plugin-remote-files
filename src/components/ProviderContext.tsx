@@ -1,4 +1,6 @@
 import {createContext, useContext} from 'react'
+import type {LayoutProps} from 'sanity'
+
 import type {RemoteFilesProvider} from '../types'
 
 /**
@@ -6,6 +8,17 @@ import type {RemoteFilesProvider} from '../types'
  * Set up by the plugin's `studio.components.layout` wrapper in `index.ts`.
  */
 export const ProviderContext = createContext<RemoteFilesProvider[]>([])
+
+/** Studio layout wrapper exposing the configured providers. */
+export function createProviderLayout(providers: RemoteFilesProvider[]) {
+  return function ProviderLayout(props: LayoutProps) {
+    return (
+      <ProviderContext.Provider value={providers}>
+        {props.renderDefault(props)}
+      </ProviderContext.Provider>
+    )
+  }
+}
 
 /** Access all configured providers. */
 export function useRemoteFilesProviders(): RemoteFilesProvider[] {

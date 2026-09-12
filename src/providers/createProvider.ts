@@ -24,5 +24,5 @@ export function createRemoteFilesProvider(
     )
   }
 
-  return {title: defaults.title, ...config}
+  return {...config, title: config.title || defaults.title}
 }

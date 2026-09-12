@@ -1,9 +1,14 @@
 import {FolderIcon} from '@sanity/icons/Folder'
-import {createElement} from 'react'
 import {definePlugin} from 'sanity'
-import {ProviderContext} from './components/ProviderContext'
-import {RemoteFilesTool} from './components/RemoteFilesTool'
-import {cloudflareR2Provider, createRemoteFilesProvider, s3Provider, signedUrlProvider} from './providers/index'
+
+import {createProviderLayout} from './components/ProviderContext'
+import {createRemoteFilesTool} from './components/RemoteFilesTool'
+import {
+  cloudflareR2Provider,
+  createRemoteFilesProvider,
+  s3Provider,
+  signedUrlProvider,
+} from './providers/index'
 import {remoteFileDocument, remoteFileType} from './schemas'
 import type {RemoteFilesPluginConfig} from './types'
 
@@ -26,11 +31,16 @@ export {
   formatDuration,
   formatFileInfo,
   formatFileInfoParts,
+  getFileIcon,
   isPreviewableAudio,
   isPreviewableImage,
   isPreviewableVideo,
 } from './format'
-export type {CloudflareR2ProviderConfig, RemoteFilesProviderConfig, S3ProviderConfig} from './providers/index'
+export type {
+  CloudflareR2ProviderConfig,
+  RemoteFilesProviderConfig,
+  S3ProviderConfig,
+} from './providers/index'
 export type {SignedUploadUrlResult, SignedUrlProviderConfig} from './providers/index'
 
 /**
@@ -62,8 +72,7 @@ export const remoteFiles = definePlugin<RemoteFilesPluginConfig>((config) => {
   const toolName = config.tool?.name || 'remote-files'
   const toolTitle = config.tool?.title || 'Remote files'
   const toolDescription =
-    config.tool?.description ||
-    'Upload, browse and manage files stored outside of Sanity.'
+    config.tool?.description || 'Upload, browse and manage files stored outside of Sanity.'
 
   return {
     name: 'sanity-plugin-remote-files',
@@ -74,8 +83,7 @@ export const remoteFiles = definePlugin<RemoteFilesPluginConfig>((config) => {
     // and tool can access the configured providers without prop drilling.
     studio: {
       components: {
-        layout: (props) =>
-          createElement(ProviderContext.Provider, {value: providers}, props.renderDefault(props)),
+        layout: createProviderLayout(providers),
       },
     },
     tools: [
@@ -83,12 +91,11 @@ export const remoteFiles = definePlugin<RemoteFilesPluginConfig>((config) => {
         name: toolName,
         title: toolTitle,
         icon: FolderIcon,
-        component: () =>
-          createElement(RemoteFilesTool, {
-            description: toolDescription,
-            providers,
-            title: toolTitle,
-          }),
+        component: createRemoteFilesTool({
+          description: toolDescription,
+          providers,
+          title: toolTitle,
+        }),
       },
     ],
   }

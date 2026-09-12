@@ -1,14 +1,16 @@
-import {Box, Button, Card, Dialog, Flex, Stack, Text, useToast} from '@sanity/ui'
 import {CloseIcon} from '@sanity/icons/Close'
 import {EyeOpenIcon} from '@sanity/icons/EyeOpen'
 import {SearchIcon} from '@sanity/icons/Search'
 import {UploadIcon} from '@sanity/icons/Upload'
+import {Box, Button, Card, Dialog, Flex, Stack, Text} from '@sanity/ui'
+import {useToast} from '@sanity/ui/toast'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {set, unset, useClient} from 'sanity'
-import type {RemoteFileDocument, RemoteFileFieldOptions, RemoteFileInputProps} from '../types'
+
+import {acceptErrorToast, matchesAccept} from '../accept'
 import {formatFileInfo, isPreviewableVideo} from '../format'
 import {REMOTE_FILE_PROJECTION, useRemoteFileUpload} from '../hooks'
-import {matchesAccept} from '../accept'
+import type {RemoteFileDocument, RemoteFileFieldOptions, RemoteFileInputProps} from '../types'
 import {FileDetailsDialog} from './FileDetailsDialog'
 import {FilePreview} from './FilePreview'
 import {getProvider, useRemoteFilesProviders} from './ProviderContext'
@@ -23,36 +25,59 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
   const client = useClient({apiVersion: '2025-01-01'})
   const toast = useToast()
   const providers = useRemoteFilesProviders()
-  const options = (schemaType.options || {}) as RemoteFileFieldOptions
-  const provider = useMemo(() => getProvider(providers, options.provider), [options.provider, providers])
+  const options: RemoteFileFieldOptions = schemaType.options || {}
+  const provider = useMemo(
+    () => getProvider(providers, options.provider),
+    [options.provider, providers],
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<RemoteFileDocument | null>(null)
   const [browserOpen, setBrowserOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const {upload, uploading} = useRemoteFileUpload(provider)
-  const isPosterMissing = Boolean(options.requirePoster && file && isPreviewableVideo(file.contentType) && !file.posterUrl)
+  const isPosterMissing = Boolean(
+    options.requirePoster && file && isPreviewableVideo(file.contentType) && !file.posterUrl,
+  )
 
   // Fetch the referenced file document when the value changes
   useEffect(() => {
     const ref = value?.asset?._ref
     if (!ref) {
+      // oxlint-disable-next-line react/set-state-in-effect
       setFile(null)
-      return
+      return undefined
     }
     let cancelled = false
-    client
-      .fetch<RemoteFileDocument | null>(`*[_id == $id][0] ${REMOTE_FILE_PROJECTION}`, {id: ref})
-      .then((nextFile) => {
+    const load = async () => {
+      try {
+        const nextFile = await client.fetch<RemoteFileDocument | null>(
+          `*[_id == $id][0] ${REMOTE_FILE_PROJECTION}`,
+          {id: ref},
+        )
         if (!cancelled) setFile(nextFile)
-      })
+      } catch (error) {
+        if (cancelled) return
+        toast.push({
+          status: 'error',
+          title: 'Could not load the remote file',
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    void load()
     return () => {
       cancelled = true
     }
-  }, [client, value?.asset?._ref])
+  }, [client, toast, value?.asset?._ref])
 
   function selectFile(nextFile: RemoteFileDocument) {
-    if (!matchesAccept(options.accept, {contentType: nextFile.contentType, filename: nextFile.filename})) {
-      toast.push({status: 'error', title: 'File type not allowed', description: `This field accepts: ${options.accept}`})
+    if (
+      !matchesAccept(options.accept, {
+        contentType: nextFile.contentType,
+        filename: nextFile.filename,
+      })
+    ) {
+      toast.push(acceptErrorToast(options.accept))
       return
     }
 
@@ -63,7 +88,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
 
   async function handleUpload(nextUpload: File) {
     if (!matchesAccept(options.accept, nextUpload)) {
-      toast.push({status: 'error', title: 'File type not allowed', description: `This field accepts: ${options.accept}`})
+      toast.push(acceptErrorToast(options.accept))
       return
     }
 
@@ -80,7 +105,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
     <Stack gap={3}>
       {file ? (
         <Card border radius={2} overflow="hidden">
-          <FilePreview file={file} fit="contain" height={320} />
+          <FilePreview controls file={file} fit="contain" height={320} />
           <Stack padding={4} gap={3}>
             <Text size={2} weight="semibold">
               {file.title || file.filename}
@@ -89,7 +114,13 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
               {formatFileInfo(file)}
             </Text>
             <Flex gap={2} paddingTop={2} wrap="wrap">
-              <Button disabled={readOnly} icon={SearchIcon} mode="ghost" onClick={() => setBrowserOpen(true)} text="Select" />
+              <Button
+                disabled={readOnly}
+                icon={SearchIcon}
+                mode="ghost"
+                onClick={() => setBrowserOpen(true)}
+                text="Select"
+              />
               <Button
                 icon={EyeOpenIcon}
                 mode="ghost"
@@ -97,7 +128,14 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
                 text={isPosterMissing ? 'Poster missing' : 'Details'}
                 tone={isPosterMissing ? 'critical' : 'default'}
               />
-              <Button disabled={readOnly} icon={CloseIcon} mode="ghost" onClick={removeFile} text="Remove" tone="critical" />
+              <Button
+                disabled={readOnly}
+                icon={CloseIcon}
+                mode="ghost"
+                onClick={removeFile}
+                text="Remove"
+                tone="critical"
+              />
             </Flex>
           </Stack>
         </Card>
@@ -117,7 +155,13 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
                 text="Upload"
                 tone="primary"
               />
-              <Button disabled={readOnly} icon={SearchIcon} mode="ghost" onClick={() => setBrowserOpen(true)} text="Select" />
+              <Button
+                disabled={readOnly}
+                icon={SearchIcon}
+                mode="ghost"
+                onClick={() => setBrowserOpen(true)}
+                text="Select"
+              />
             </Flex>
           </Stack>
         </Card>
@@ -161,7 +205,7 @@ export function RemoteFileInput(props: RemoteFileInputProps) {
           file={file}
           initialTab={isPosterMissing ? 'poster' : 'details'}
           onClose={() => setDetailsOpen(false)}
-          onDelete={async () => removeFile()}
+          onDeleted={removeFile}
           onUpdate={setFile}
           provider={getProvider(providers, file.provider)}
           requirePoster={options.requirePoster}

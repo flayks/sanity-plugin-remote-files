@@ -1,3 +1,8 @@
+import {DocumentIcon} from '@sanity/icons/Document'
+import {ImageIcon} from '@sanity/icons/Image'
+import {PlayIcon} from '@sanity/icons/Play'
+import {VideoIcon} from '@sanity/icons/Video'
+
 /** Human-readable byte size, e.g. `6.12 MB` or `645.3 KB`. */
 export function formatBytes(value?: number): string {
   if (!Number.isFinite(value) || !value) return '0 B'
@@ -12,7 +17,9 @@ export function formatBytes(value?: number): string {
 /** Short locale date and time, e.g. `Jul 6, 2026, 2:30 PM`. */
 export function formatDate(value?: string): string {
   if (!value) return 'Unknown date'
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value))
+  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(
+    new Date(value),
+  )
 }
 
 /**
@@ -25,7 +32,8 @@ export function formatDuration(value?: number): string | undefined {
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
-  if (hours) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  if (hours)
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
@@ -56,6 +64,14 @@ export function formatFileInfo(file: FileInfoValue): string {
   return [info.contentType, info.duration, info.dimensions, info.size, info.uploadedAt]
     .filter(Boolean)
     .join(' · ')
+}
+
+/** Icon standing in for the file kind, used by the document previews. */
+export function getFileIcon(contentType?: string) {
+  if (isPreviewableImage(contentType)) return ImageIcon
+  if (isPreviewableVideo(contentType)) return VideoIcon
+  if (isPreviewableAudio(contentType)) return PlayIcon
+  return DocumentIcon
 }
 
 /** True if the content type is a previewable image. */

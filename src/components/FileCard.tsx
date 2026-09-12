@@ -1,13 +1,13 @@
-import {Button, Card, Flex, Stack, Text} from '@sanity/ui'
 import {CalendarIcon} from '@sanity/icons/Calendar'
 import {CheckmarkIcon} from '@sanity/icons/Checkmark'
 import {ClockIcon} from '@sanity/icons/Clock'
 import {CloseIcon} from '@sanity/icons/Close'
 import {DownloadIcon} from '@sanity/icons/Download'
 import {EyeOpenIcon} from '@sanity/icons/EyeOpen'
-import type {RemoteFileDocument} from '../types'
+import {Button, Card, Flex, Stack, Text} from '@sanity/ui'
+
 import {formatBytes, formatDate, formatDuration} from '../format'
-import {useDurationFallback} from '../hooks'
+import type {RemoteFileDocument} from '../types'
 import {FilePreview} from './FilePreview'
 
 type FileCardProps = {
@@ -18,23 +18,43 @@ type FileCardProps = {
   selected?: boolean
 }
 
+/** Rendered once by the browser, not per card. */
+export const fileCardStyles = `
+  .remote-file-card { transition: border-color 200ms }
+  .remote-file-card:hover { border-color: var(--card-muted-fg-color) }
+  .remote-file-card .selected-remove { display: none }
+  .remote-file-card:hover .selected-label { display: none }
+  .remote-file-card:hover .selected-remove { display: block }
+`
+
+const selectedStyle = {
+  borderColor: 'var(--card-badge-positive-fg-color)',
+  boxShadow: '0 0 0 1px var(--card-badge-positive-fg-color)',
+}
+
 /** Grid card showing a file preview and key metadata. */
 export function FileCard({file, onOpen, onRemoveSelected, onSelect, selected}: FileCardProps) {
-  const duration = formatDuration(useDurationFallback(file))
+  const duration = formatDuration(file.duration)
 
   return (
-    <Card border className="remote-file-card" radius={2} overflow="hidden" style={selected ? {borderColor: '#16a34a', boxShadow: '0 0 0 1px #16a34a'} : undefined}>
-      <style>{`
-        .remote-file-card { transition: border-color 200ms }
-        .remote-file-card:hover { border-color: #9ca3af }
-        .remote-file-card .selected-remove { display: none }
-        .remote-file-card:hover .selected-label { display: none }
-        .remote-file-card:hover .selected-remove { display: block }
-      `}</style>
+    <Card
+      border
+      className="remote-file-card"
+      radius={2}
+      overflow="hidden"
+      style={selected ? selectedStyle : undefined}
+    >
       <button
         aria-label={`Open ${file.title || file.filename}`}
         onClick={() => onOpen(file)}
-        style={{background: 'transparent', border: 0, cursor: 'pointer', display: 'block', padding: 0, width: '100%'}}
+        style={{
+          background: 'transparent',
+          border: 0,
+          cursor: 'pointer',
+          display: 'block',
+          padding: 0,
+          width: '100%',
+        }}
         type="button"
       >
         <FilePreview file={file} fit="contain" />
@@ -43,20 +63,26 @@ export function FileCard({file, onOpen, onRemoveSelected, onSelect, selected}: F
         <Text size={2} weight="semibold" textOverflow="ellipsis">
           {file.title || file.filename}
         </Text>
-        <Flex wrap="wrap" style={{ gap: '0.5rem 0.75rem' }}>
+        <Flex wrap="wrap" style={{gap: '0.5rem 0.75rem'}}>
           {duration && (
             <Flex align="center" gap={1}>
               <ClockIcon />
-              <Text muted size={1}>{duration}</Text>
+              <Text muted size={1}>
+                {duration}
+              </Text>
             </Flex>
           )}
           <Flex align="center" gap={1}>
             <DownloadIcon />
-            <Text muted size={1}>{formatBytes(file.size)}</Text>
+            <Text muted size={1}>
+              {formatBytes(file.size)}
+            </Text>
           </Flex>
           <Flex align="center" gap={1}>
             <CalendarIcon />
-            <Text muted size={1}>{formatDate(file.uploadedAt)}</Text>
+            <Text muted size={1}>
+              {formatDate(file.uploadedAt)}
+            </Text>
           </Flex>
         </Flex>
         <Flex gap={2} wrap="wrap">

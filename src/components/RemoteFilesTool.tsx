@@ -1,4 +1,5 @@
 import {Box, Card, Container, Heading, Stack, Text} from '@sanity/ui'
+
 import type {RemoteFilesProvider} from '../types'
 import {RemoteFilesBrowser} from './RemoteFilesBrowser'
 
@@ -6,6 +7,13 @@ type RemoteFilesToolProps = {
   providers: RemoteFilesProvider[]
   title: string
   description: string
+}
+
+/** Bind the tool props configured on the plugin to the tool component. */
+export function createRemoteFilesTool(props: RemoteFilesToolProps) {
+  return function RemoteFilesToolPage() {
+    return <RemoteFilesTool {...props} />
+  }
 }
 
 /** Studio tool: a full-page browser for managing remote files. */

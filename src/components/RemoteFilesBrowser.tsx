@@ -1,12 +1,26 @@
-import {Box, Button, Card, Dialog, Flex, Grid, Select, Spinner, Stack, Text, TextInput, useToast} from '@sanity/ui'
 import {SearchIcon} from '@sanity/icons/Search'
 import {UploadIcon} from '@sanity/icons/Upload'
+import {
+  Box,
+  Button,
+  Card,
+  Dialog,
+  Flex,
+  Grid,
+  Select,
+  Spinner,
+  Stack,
+  Text,
+  TextInput,
+} from '@sanity/ui'
+import {useToast} from '@sanity/ui/toast'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useClient} from 'sanity'
-import type {RemoteFileDocument, RemoteFilesProvider} from '../types'
+
+import {acceptErrorToast, acceptToGroq, matchesAccept} from '../accept'
 import {REMOTE_FILE_PROJECTION, useRemoteFileUpload} from '../hooks'
-import {matchesAccept} from '../accept'
-import {FileCard} from './FileCard'
+import type {RemoteFileDocument, RemoteFilesProvider} from '../types'
+import {FileCard, fileCardStyles} from './FileCard'
 import {FileDetailsDialog} from './FileDetailsDialog'
 import {getProvider} from './ProviderContext'
 
@@ -19,21 +33,45 @@ type RemoteFilesBrowserProps = {
   selectedFileId?: string
 }
 
-// Two queries: one for listing, one for search.
-// The search query is only used when there's a search term to avoid
-// referencing the $search param when it's not provided.
-const filesQuery = `*[_type == "remoteFiles.file" && (!defined($provider) || provider == $provider)] | order(uploadedAt desc) [0...200] ${REMOTE_FILE_PROJECTION}`
-const searchFilesQuery = `*[_type == "remoteFiles.file" && (!defined($provider) || provider == $provider) && (filename match $search || title match $search)] | order(uploadedAt desc) [0...200] ${REMOTE_FILE_PROJECTION}`
+const FILE_LIMIT = 200
 
-function UploadProgressDialog({fileName, progress, stage}: {fileName: string; progress?: number; stage: 'uploading' | 'saving'}) {
+// The search clause is only added when there's a term, to avoid
+// referencing the $search param when it's not provided.
+function buildFilesQuery(accept?: string, searching?: boolean) {
+  const clauses = [
+    '_type == "remoteFiles.file"',
+    '(!defined($provider) || provider == $provider)',
+    acceptToGroq(accept),
+    searching ? '(filename match $search || title match $search)' : null,
+  ].filter(Boolean)
+
+  return `*[${clauses.join(' && ')}] | order(uploadedAt desc) [0...${FILE_LIMIT}] ${REMOTE_FILE_PROJECTION}`
+}
+
+function UploadProgressDialog({
+  fileName,
+  progress,
+  stage,
+}: {
+  fileName: string
+  progress?: number
+  stage: 'uploading' | 'saving'
+}) {
   const progressLabel = typeof progress === 'number' ? `${progress}%` : 'Uploading...'
 
   return (
-    <Dialog header="Uploading file" id="remote-file-upload-progress" onClose={() => undefined} width={0}>
+    <Dialog
+      header="Uploading file"
+      id="remote-file-upload-progress"
+      onClose={() => undefined}
+      width={0}
+    >
       <Stack gap={4} padding={4}>
         <Stack gap={3}>
           <Text weight="semibold">{fileName}</Text>
-          <Text muted size={1}>{stage === 'saving' ? 'Saving file metadata...' : progressLabel}</Text>
+          <Text muted size={1}>
+            {stage === 'saving' ? 'Saving file metadata...' : progressLabel}
+          </Text>
         </Stack>
 
         {typeof progress === 'number' ? (
@@ -51,7 +89,9 @@ function UploadProgressDialog({fileName, progress, stage}: {fileName: string; pr
         ) : (
           <Flex align="center" gap={3}>
             <Spinner muted />
-            <Text muted size={1}>Waiting for the provider...</Text>
+            <Text muted size={1}>
+              Waiting for the provider...
+            </Text>
           </Flex>
         )}
       </Stack>
@@ -63,7 +103,14 @@ function UploadProgressDialog({fileName, progress, stage}: {fileName: string; pr
  * Browser grid for remote files. Used both in the Studio tool
  * and inside the field input's "Select" dialog.
  */
-export function RemoteFilesBrowser({accept, initialProvider, providers, onRemoveSelected, onSelect, selectedFileId}: RemoteFilesBrowserProps) {
+export function RemoteFilesBrowser({
+  accept,
+  initialProvider,
+  providers,
+  onRemoveSelected,
+  onSelect,
+  selectedFileId,
+}: RemoteFilesBrowserProps) {
   const client = useClient({apiVersion: '2025-01-01'})
   const toast = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -75,27 +122,47 @@ export function RemoteFilesBrowser({accept, initialProvider, providers, onRemove
   const provider = useMemo(() => getProvider(providers, providerId), [providerId, providers])
   const {upload, uploading, uploadProgress} = useRemoteFileUpload(provider)
 
-  const loadFiles = useCallback(async () => {
-    setLoading(true)
-    try {
-      const wildcard = search.trim() ? `${search.trim()}*` : null
-      const nextFiles = wildcard
-        ? await client.fetch<RemoteFileDocument[]>(searchFilesQuery, {provider: provider?.id || null, search: wildcard})
-        : await client.fetch<RemoteFileDocument[]>(filesQuery, {provider: provider?.id || null})
-      setFiles(nextFiles.filter((file) => matchesAccept(accept, {contentType: file.contentType, filename: file.filename})))
-    } finally {
-      setLoading(false)
-    }
-  }, [accept, client, provider?.id, search])
+  const loadFiles = useCallback(
+    async (isStale: () => boolean) => {
+      setLoading(true)
+      try {
+        const wildcard = search.trim() ? `${search.trim()}*` : null
+        const nextFiles = await client.fetch<RemoteFileDocument[]>(
+          buildFilesQuery(accept, Boolean(wildcard)),
+          {provider: provider?.id || null, ...(wildcard ? {search: wildcard} : {})},
+        )
+        if (isStale()) return
+        setFiles(
+          nextFiles.filter((file) =>
+            matchesAccept(accept, {contentType: file.contentType, filename: file.filename}),
+          ),
+        )
+      } catch (error) {
+        if (isStale()) return
+        toast.push({
+          status: 'error',
+          title: 'Could not load remote files',
+          description: error instanceof Error ? error.message : String(error),
+        })
+      } finally {
+        if (!isStale()) setLoading(false)
+      }
+    },
+    [accept, client, provider, search, toast],
+  )
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadFiles(), 150)
-    return () => window.clearTimeout(timer)
+    let cancelled = false
+    const timer = window.setTimeout(() => void loadFiles(() => cancelled), 150)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
   }, [loadFiles])
 
   async function handleUpload(file: File) {
     if (!matchesAccept(accept, file)) {
-      toast.push({status: 'error', title: 'File type not allowed', description: `This field accepts: ${accept}`})
+      toast.push(acceptErrorToast(accept))
       return
     }
 
@@ -106,8 +173,7 @@ export function RemoteFilesBrowser({accept, initialProvider, providers, onRemove
     }
   }
 
-  async function handleDelete(file: RemoteFileDocument) {
-    await client.delete(file._id)
+  function handleDeleted(file: RemoteFileDocument) {
     setFiles((current) => current.filter((item) => item._id !== file._id))
   }
 
@@ -132,7 +198,10 @@ export function RemoteFilesBrowser({accept, initialProvider, providers, onRemove
           </Box>
           {providers.length > 1 && (
             <Box style={{minWidth: 160}}>
-              <Select onChange={(event) => setProviderId(event.currentTarget.value)} value={provider?.id || ''}>
+              <Select
+                onChange={(event) => setProviderId(event.currentTarget.value)}
+                value={provider?.id || ''}
+              >
                 {providers.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.title}
@@ -153,7 +222,13 @@ export function RemoteFilesBrowser({accept, initialProvider, providers, onRemove
           ref={inputRef}
           type="file"
         />
-        <Button icon={UploadIcon} loading={uploading} onClick={() => inputRef.current?.click()} text="Upload file" tone="primary" />
+        <Button
+          icon={UploadIcon}
+          loading={uploading}
+          onClick={() => inputRef.current?.click()}
+          text="Upload file"
+          tone="primary"
+        />
       </Flex>
 
       {accept && (
@@ -170,18 +245,26 @@ export function RemoteFilesBrowser({accept, initialProvider, providers, onRemove
           </Flex>
         </Card>
       ) : files.length ? (
-        <Grid gap={4} style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'}}>
-          {files.map((file) => (
-            <FileCard
-              file={file}
-              key={file._id}
-              onOpen={setSelected}
-              onRemoveSelected={onRemoveSelected}
-              onSelect={onSelect}
-              selected={file._id === selectedFileId}
-            />
-          ))}
-        </Grid>
+        <Stack gap={3}>
+          <style>{fileCardStyles}</style>
+          <Grid gap={4} style={{gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'}}>
+            {files.map((file) => (
+              <FileCard
+                file={file}
+                key={file._id}
+                onOpen={setSelected}
+                onRemoveSelected={onRemoveSelected}
+                onSelect={onSelect}
+                selected={file._id === selectedFileId}
+              />
+            ))}
+          </Grid>
+          {files.length === FILE_LIMIT && (
+            <Text muted size={1}>
+              Showing the {FILE_LIMIT} most recent files. Search to narrow the list.
+            </Text>
+          )}
+        </Stack>
       ) : (
         <Card border padding={5} radius={2} tone="transparent">
           <Stack gap={3}>
@@ -197,7 +280,7 @@ export function RemoteFilesBrowser({accept, initialProvider, providers, onRemove
         <FileDetailsDialog
           file={selected}
           onClose={() => setSelected(null)}
-          onDelete={handleDelete}
+          onDeleted={handleDeleted}
           onSelect={onSelect}
           onUpdate={handleUpdate}
           provider={getProvider(providers, selected.provider)}

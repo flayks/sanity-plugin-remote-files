@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import {execFileSync, spawnSync} from 'node:child_process'
-import {createInterface} from 'node:readline/promises'
+import {randomBytes} from 'node:crypto'
 import {cpSync, existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs'
 import {dirname, join, resolve} from 'node:path'
-import {randomBytes} from 'node:crypto'
+import {createInterface} from 'node:readline/promises'
 import {fileURLToPath} from 'node:url'
 
 const args = process.argv.slice(2)
@@ -30,7 +30,10 @@ try {
   if (provider === 'r2' && !flags.has('--template-only')) {
     await setupR2(resolve(targetArg || 'remote-files-r2-worker'))
   } else {
-    scaffoldTemplate(provider, resolve(targetArg || `remote-files-${provider === 'r2' ? 'r2-worker' : 's3-api'}`))
+    scaffoldTemplate(
+      provider,
+      resolve(targetArg || `remote-files-${provider === 'r2' ? 'r2-worker' : 's3-api'}`),
+    )
   }
 } finally {
   rl.close()
@@ -67,9 +70,15 @@ async function setupR2(target) {
   const listCheck = capture(wrangler, ['r2', 'bucket', 'list'], {allowFailure: true})
   if (!process.env.CLOUDFLARE_ACCOUNT_ID && listCheck.includes('More than one account available')) {
     warn('Multiple accounts detected')
-    const accounts = listCheck.split('\n').filter((line) => line.includes('`')).map((line) => line.trim().replaceAll('`', ''))
-    const selected = await choose('Choose account:', accounts.length ? accounts : ['Enter account id manually'])
-    const id = selected.match(/[a-f0-9]{32}/)?.[0] || await input('Cloudflare account id:')
+    const accounts = listCheck
+      .split('\n')
+      .filter((line) => line.includes('`'))
+      .map((line) => line.trim().replaceAll('`', ''))
+    const selected = await choose(
+      'Choose account:',
+      accounts.length ? accounts : ['Enter account id manually'],
+    )
+    const id = selected.match(/[a-f0-9]{32}/)?.[0] || (await input('Cloudflare account id:'))
     process.env.CLOUDFLARE_ACCOUNT_ID = id
     success(`Using account ${id}`)
   }
@@ -94,7 +103,8 @@ async function setupR2(target) {
       skipCreation = true
       success(`Using existing bucket in ${location}`)
     } else if (choice.startsWith('Delete')) {
-      if (!(await confirm(`Delete bucket '${bucketName}'? This cannot be undone.`, false))) fail('Cancelled')
+      if (!(await confirm(`Delete bucket '${bucketName}'? This cannot be undone.`, false)))
+        fail('Cancelled')
       run(wrangler, ['r2', 'bucket', 'delete', bucketName], {label: 'Deleting bucket'})
       for (let attempt = 1; attempt <= 3; attempt++) {
         await sleep(2000)
@@ -102,7 +112,8 @@ async function setupR2(target) {
         if (!bucketExists(bucketList, bucketName)) break
         warn(`Still deleting... (attempt ${attempt}/3)`)
       }
-      if (bucketExists(bucketList, bucketName)) fail('Failed to delete bucket. Please delete it manually and retry.')
+      if (bucketExists(bucketList, bucketName))
+        fail('Failed to delete bucket. Please delete it manually and retry.')
     } else {
       bucketName = await input('New bucket name:', 'my-sanity-media')
     }
@@ -119,9 +130,16 @@ async function setupR2(target) {
       'oc - Oceania',
     ])
     const locationCode = location.split(' ')[0]
-    run(wrangler, ['r2', 'bucket', 'create', bucketName, `--location=${locationCode}`], {label: `Creating bucket in ${locationCode}`})
-    const createdLocation = getValue(capture(wrangler, ['r2', 'bucket', 'info', bucketName], {allowFailure: true}), 'location') || locationCode
-    if (createdLocation.toLowerCase() !== locationCode.toLowerCase()) warn(`Location mismatch: selected ${locationCode}, got ${createdLocation}`)
+    run(wrangler, ['r2', 'bucket', 'create', bucketName, `--location=${locationCode}`], {
+      label: `Creating bucket in ${locationCode}`,
+    })
+    const createdLocation =
+      getValue(
+        capture(wrangler, ['r2', 'bucket', 'info', bucketName], {allowFailure: true}),
+        'location',
+      ) || locationCode
+    if (createdLocation.toLowerCase() !== locationCode.toLowerCase())
+      warn(`Location mismatch: selected ${locationCode}, got ${createdLocation}`)
     success(`Bucket '${bucketName}' created in ${createdLocation}`)
   }
 
@@ -136,8 +154,12 @@ async function setupR2(target) {
 
   if (access.includes('r2.dev') || access.startsWith('both')) {
     run(wrangler, ['r2', 'bucket', 'dev-url', 'enable', bucketName], {allowFailure: true})
-    const devUrlOutput = capture(wrangler, ['r2', 'bucket', 'dev-url', 'get', bucketName], {allowFailure: true})
-    publicUrl = devUrlOutput.match(/https:\/\/[^\s]+\.r2\.dev/)?.[0] || await input('Enter r2.dev URL:', 'https://pub-xxxxx.r2.dev')
+    const devUrlOutput = capture(wrangler, ['r2', 'bucket', 'dev-url', 'get', bucketName], {
+      allowFailure: true,
+    })
+    publicUrl =
+      devUrlOutput.match(/https:\/\/[^\s]+\.r2\.dev/)?.[0] ||
+      (await input('Enter r2.dev URL:', 'https://pub-xxxxx.r2.dev'))
     success(`r2.dev: ${publicUrl}`)
   }
 
@@ -147,7 +169,16 @@ async function setupR2(target) {
       warn(`Need Cloudflare Zone ID for ${domain}`)
       const zoneId = await input('Zone ID:')
       if (zoneId) {
-        const result = spawnWrangler(wrangler, ['r2', 'bucket', 'domain', 'add', bucketName, `--domain=${domain}`, `--zone-id=${zoneId}`, '--force'])
+        const result = spawnWrangler(wrangler, [
+          'r2',
+          'bucket',
+          'domain',
+          'add',
+          bucketName,
+          `--domain=${domain}`,
+          `--zone-id=${zoneId}`,
+          '--force',
+        ])
         if (result.status === 0) {
           publicUrl = `https://${domain}`
           success(`Custom domain: ${publicUrl}`)
@@ -186,12 +217,17 @@ async function setupR2(target) {
   success(`Config: worker=${workerName}, bucket=${bucketName}`)
 
   const authSecret = randomBytes(32).toString('hex')
-  run(wrangler, ['--config', wranglerToml, 'secret', 'put', 'REMOTE_FILES_SECRET'], {input: authSecret, label: 'Saving Worker secret'})
+  run(wrangler, ['--config', wranglerToml, 'secret', 'put', 'REMOTE_FILES_SECRET'], {
+    input: authSecret,
+    label: 'Saving Worker secret',
+  })
 
   step(5, 'Deploy Worker')
   const deploy = capture(wrangler, ['--config', wranglerToml, 'deploy'], {cwd: target})
   console.log(deploy)
-  const workerUrl = deploy.match(/https:\/\/[^\s]+\.workers\.dev/)?.[0] || await input('Worker URL:', `https://${workerName}.workers.dev`)
+  const workerUrl =
+    deploy.match(/https:\/\/[^\s]+\.workers\.dev/)?.[0] ||
+    (await input('Worker URL:', `https://${workerName}.workers.dev`))
   success(`Deployed: ${workerUrl}`)
 
   console.log('')
@@ -222,19 +258,23 @@ function scaffoldTemplate(providerName, target, options = {}) {
   cpSync(source, target, {recursive: true, force: true})
 
   if (!options.quiet) {
-    console.log(`Created ${providerName === 'r2' ? 'Cloudflare R2 Worker' : 'S3 API'} template at ${target}`)
+    console.log(
+      `Created ${providerName === 'r2' ? 'Cloudflare R2 Worker' : 'S3 API'} template at ${target}`,
+    )
     console.log('Next steps:')
     if (providerName === 'r2') {
       console.log('1. cd ' + target)
       console.log('2. npm install')
-      console.log('3. Edit wrangler.toml bucket_name, PUBLIC_URL, ALLOWED_ORIGINS, and UPLOAD_PREFIX')
-      console.log('4. Optional: wrangler secret put REMOTE_FILES_SECRET')
+      console.log(
+        '3. Edit wrangler.toml bucket_name, PUBLIC_URL, ALLOWED_ORIGINS, and UPLOAD_PREFIX',
+      )
+      console.log('4. Required: wrangler secret put REMOTE_FILES_SECRET')
       console.log('5. npm run deploy')
     } else {
       console.log('1. cd ' + target)
       console.log('2. npm install')
-      console.log('3. Set AWS_REGION, AWS_BUCKET, PUBLIC_URL, and AWS credentials')
-      console.log('4. Optional: set REMOTE_FILES_SECRET')
+      console.log('3. Set AWS_REGION, AWS_BUCKET, PUBLIC_URL, ALLOWED_ORIGINS, AWS credentials')
+      console.log('4. Required: set REMOTE_FILES_SECRET')
       console.log('5. npm run dev or deploy the API to your host')
     }
   }
@@ -267,7 +307,8 @@ function spawnWrangler(wrangler, args, options = {}) {
 function run(wrangler, args, options = {}) {
   if (options.label) console.log(dim(options.label + '...'))
   const result = spawnWrangler(wrangler, args, options)
-  if (result.status !== 0 && !options.allowFailure) fail(`Command failed: ${[wrangler.cmd, ...wrangler.prefix, ...args].join(' ')}`)
+  if (result.status !== 0 && !options.allowFailure)
+    fail(`Command failed: ${[wrangler.cmd, ...wrangler.prefix, ...args].join(' ')}`)
   return result
 }
 
@@ -278,12 +319,16 @@ function capture(wrangler, args, options = {}) {
     env: process.env,
   })
   const output = `${result.stdout || ''}${result.stderr || ''}`
-  if (result.status !== 0 && !options.allowFailure) fail(output || `Command failed: ${args.join(' ')}`)
+  if (result.status !== 0 && !options.allowFailure)
+    fail(output || `Command failed: ${args.join(' ')}`)
   return output
 }
 
 function canRun(wrangler, args) {
-  return spawnSync(wrangler.cmd, [...wrangler.prefix, ...args], {stdio: 'ignore', env: process.env}).status === 0
+  return (
+    spawnSync(wrangler.cmd, [...wrangler.prefix, ...args], {stdio: 'ignore', env: process.env})
+      .status === 0
+  )
 }
 
 async function input(label, defaultValue = '') {
@@ -319,11 +364,21 @@ function writeWorkerConfig(path, values) {
 }
 
 function bucketExists(output, bucketName) {
-  return new RegExp(`name:\\s*${escapeRegExp(bucketName)}(\\s|$)`).test(output) || output.includes(`"name":"${bucketName}"`)
+  return (
+    new RegExp(`name:\\s*${escapeRegExp(bucketName)}(\\s|$)`).test(output) ||
+    output.includes(`"name":"${bucketName}"`)
+  )
 }
 
 function getValue(output, key) {
-  return output.split('\n').find((line) => line.toLowerCase().startsWith(`${key.toLowerCase()}:`))?.split(':').slice(1).join(':').trim().replaceAll(',', '')
+  return output
+    .split('\n')
+    .find((line) => line.toLowerCase().startsWith(`${key.toLowerCase()}:`))
+    ?.split(':')
+    .slice(1)
+    .join(':')
+    .trim()
+    .replaceAll(',', '')
 }
 
 function escapeRegExp(value) {

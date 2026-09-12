@@ -12,6 +12,7 @@
 
 - **Remote files tool**: Browse, search, upload and manage your remote file library.
 - **`remoteFile` field type**: Upload or select remote files directly from document fields.
+- **Playable previews**: Play audio and video straight from the field, without opening the details dialog.
 - **File details dialog**: Preview files, edit internal titles, inspect metadata and see which documents use a file.
 - **Cloudflare R2 provider**: Worker-backed upload/delete flow with an interactive setup command.
 - **S3-compatible provider**: Express API template for S3 or S3-compatible storage.
@@ -39,8 +40,8 @@ bun add sanity-plugin-remote-files
 Add it as a plugin in `sanity.config.ts` (or `.js`):
 
 ```ts
-import { defineConfig } from 'sanity'
-import { cloudflareR2Provider, remoteFiles } from 'sanity-plugin-remote-files'
+import {defineConfig} from 'sanity'
+import {cloudflareR2Provider, remoteFiles} from 'sanity-plugin-remote-files'
 
 export default defineConfig({
   // ...
@@ -70,7 +71,7 @@ export default defineConfig({
 Then use the `remoteFile` field type in your schema, in this example for videos:
 
 ```ts
-import { defineField, defineType } from 'sanity'
+import {defineField, defineType} from 'sanity'
 
 export const page = defineType({
   name: 'page',
@@ -119,6 +120,19 @@ S3 setup scaffolds a small Express API template. Bucket, IAM and deployment diff
 npx sanity-plugin-remote-files setup s3 remote-files-s3-api
 ```
 
+## Securing the backend
+
+Both templates refuse to start handling requests without `REMOTE_FILES_SECRET`: without it, anyone could upload to or wipe your bucket. The R2 setup command generates and deploys one for you.
+
+| Variable                | Default | Purpose                                                            |
+| ----------------------- | ------- | ------------------------------------------------------------------ |
+| `REMOTE_FILES_SECRET`   | —       | Required bearer token for `POST /upload` and `DELETE /files/:key`. |
+| `ALLOWED_ORIGINS`       | —       | Comma-separated Studio origins allowed by CORS.                    |
+| `MAX_UPLOAD_MB`         | `100`   | Rejects larger uploads with `413`.                                 |
+| `ALLOWED_CONTENT_TYPES` | all     | Comma-separated `video/mp4` or `video/*` entries.                  |
+
+The token is passed from the Studio as an `authorization` header, so it is part of the Studio bundle and readable by anyone who can load the Studio. That is fine for a Studio behind a login you control. For a public Studio, use `signedUrlProvider` instead: your backend keeps the credentials and hands out short-lived upload URLs.
+
 ## Options
 
 ### `remoteFiles(config)`
@@ -141,8 +155,14 @@ Provider ids are stored on file documents and make multiple instances possible:
 ```ts
 remoteFiles({
   providers: [
-    cloudflareR2Provider({ id: 'marketing-r2', endpoint: process.env.SANITY_STUDIO_MARKETING_R2_ENDPOINT }),
-    cloudflareR2Provider({ id: 'product-r2', endpoint: process.env.SANITY_STUDIO_PRODUCT_R2_ENDPOINT }),
+    cloudflareR2Provider({
+      id: 'marketing-r2',
+      endpoint: process.env.SANITY_STUDIO_MARKETING_R2_ENDPOINT,
+    }),
+    cloudflareR2Provider({
+      id: 'product-r2',
+      endpoint: process.env.SANITY_STUDIO_PRODUCT_R2_ENDPOINT,
+    }),
   ],
 })
 ```
@@ -178,7 +198,7 @@ DELETE /files/:key  delete a stored object
 If another storage provider can follow that contract, adding it is usually just a small provider factory:
 
 ```ts
-import { createRemoteFilesProvider } from 'sanity-plugin-remote-files'
+import {createRemoteFilesProvider} from 'sanity-plugin-remote-files'
 
 export function myProvider(config: {id: string; endpoint: string; title?: string}) {
   return createRemoteFilesProvider(config, {title: 'My Provider'})
