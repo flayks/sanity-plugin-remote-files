@@ -1,11 +1,14 @@
 import {defineField, defineType} from 'sanity'
+
 import {RemoteFileInput} from './components/RemoteFileInput'
+import {getFileIcon} from './format'
 import type {RemoteFileFieldOptions, RemoteFileValue} from './types'
 
 function isVideoDocument(document: unknown) {
   if (!document || typeof document !== 'object' || !('contentType' in document)) return false
 
-  return String(document.contentType || '').startsWith('video/')
+  const {contentType} = document
+  return typeof contentType === 'string' && contentType.startsWith('video/')
 }
 
 /**
@@ -24,7 +27,8 @@ export const remoteFileDocument = defineType({
       name: 'poster',
       title: 'Poster',
       type: 'image',
-      description: "A lightweight preview image, usually the video's first frame, shown before playback starts.",
+      description:
+        "A lightweight preview image, usually the video's first frame, shown before playback starts.",
       hidden: ({document}) => !isVideoDocument(document),
     }),
     defineField({
@@ -79,6 +83,7 @@ export const remoteFileDocument = defineType({
       return {
         title: selection.title || selection.filename || 'Untitled file',
         subtitle: selection.subtitle,
+        media: getFileIcon(selection.subtitle),
       }
     },
   },
@@ -104,7 +109,7 @@ export const remoteFileType = defineType({
   ],
   validation: (rule) =>
     rule.custom(async (value, context) => {
-      const options = (context.type?.options || {}) as RemoteFileFieldOptions
+      const options: RemoteFileFieldOptions = context.type?.options || {}
       if (!options.requirePoster) return true
 
       const ref = (value as RemoteFileValue | undefined)?.asset?._ref
@@ -113,12 +118,11 @@ export const remoteFileType = defineType({
       const file = await context.getClient({apiVersion: '2025-01-01'}).fetch<{
         contentType?: string
         hasPoster?: boolean
-      } | null>(
-        '*[_id == $id][0]{contentType, "hasPoster": defined(poster.asset._ref)}',
-        {id: ref},
-      )
+      } | null>('*[_id == $id][0]{contentType, "hasPoster": defined(poster.asset._ref)}', {id: ref})
 
-      return !isVideoDocument(file) || file?.hasPoster ? true : 'A poster image is required for this video'
+      return !isVideoDocument(file) || file?.hasPoster
+        ? true
+        : 'A poster image is required for this video'
     }),
   preview: {
     select: {title: 'asset.title', filename: 'asset.filename', subtitle: 'asset.contentType'},
@@ -126,6 +130,7 @@ export const remoteFileType = defineType({
       return {
         title: selection.title || selection.filename || 'Remote file',
         subtitle: selection.subtitle,
+        media: getFileIcon(selection.subtitle),
       }
     },
   },

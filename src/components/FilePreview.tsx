@@ -1,8 +1,9 @@
-import {Card, Flex, Text} from '@sanity/ui'
 import {DocumentIcon} from '@sanity/icons/Document'
 import {PlayIcon} from '@sanity/icons/Play'
-import type {RemoteFileDocument} from '../types'
+import {Card, Flex, Text} from '@sanity/ui'
+
 import {isPreviewableAudio, isPreviewableImage, isPreviewableVideo} from '../format'
+import type {RemoteFileDocument} from '../types'
 
 type FilePreviewProps = {
   file: RemoteFileDocument
@@ -37,14 +38,21 @@ export function FilePreview({controls, file, fit = 'cover', height = 160}: FileP
     }
 
     return (
+      // oxlint-disable-next-line jsx-a11y/media-has-caption -- no caption track for remote files
       <video
         controls={controls}
-        muted
+        muted={!controls}
         poster={file.posterUrl}
         playsInline
         preload={controls ? 'auto' : 'metadata'}
         src={file.url}
-        style={{background: controls ? '#000' : background, display: 'block', height, objectFit: controls ? 'contain' : fit, width: '100%'}}
+        style={{
+          background: controls ? '#000' : background,
+          display: 'block',
+          height,
+          objectFit: controls ? 'contain' : fit,
+          width: '100%',
+        }}
       />
     )
   }
@@ -53,11 +61,12 @@ export function FilePreview({controls, file, fit = 'cover', height = 160}: FileP
     return (
       <Card tone="transparent" padding={4} style={{height}}>
         <Flex align="center" height="fill" justify="center" direction="column" gap={4}>
-          <PlayIcon />
-          <Text align="center" muted size={1} textOverflow="ellipsis">
-            {file.filename}
-          </Text>
-          {controls && <audio controls preload="metadata" src={file.url} style={{width: '100%'}} />}
+          {controls ? (
+            // oxlint-disable-next-line jsx-a11y/media-has-caption -- no caption track for remote files
+            <audio controls preload="metadata" src={file.url} style={{width: '100%'}} />
+          ) : (
+            <PlayIcon />
+          )}
         </Flex>
       </Card>
     )
