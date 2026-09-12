@@ -2,24 +2,42 @@ import {DeleteObjectCommand, PutObjectCommand, S3Client} from '@aws-sdk/client-s
 import express from 'express'
 import multer from 'multer'
 
+const DEFAULT_MAX_UPLOAD_MB = 100
+
 const app = express()
-const upload = multer()
+const maxBytes = (Number(process.env.MAX_UPLOAD_MB) || DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024
+const upload = multer({limits: {fileSize: maxBytes, files: 1}})
 const client = new S3Client({region: process.env.AWS_REGION})
 
 app.use((request, response, next) => {
-  const origin = request.headers.origin || '*'
-  response.setHeader('Access-Control-Allow-Origin', origin)
+  const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map((item) => item.trim()).filter(Boolean)
+  const origin = request.headers.origin || ''
+  const allowOrigin = allowed.includes('*') || allowed.includes(origin) ? origin || '*' : allowed[0] || ''
+
+  if (allowOrigin) response.setHeader('Access-Control-Allow-Origin', allowOrigin)
   response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type')
   response.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, DELETE')
+  // The response body varies per origin, so caches must not share it
+  response.setHeader('Vary', 'Origin')
   if (request.method === 'OPTIONS') return response.sendStatus(204)
-  if (process.env.REMOTE_FILES_SECRET && request.headers.authorization !== `Bearer ${process.env.REMOTE_FILES_SECRET}`) {
+
+  // Fail closed: these routes write to and delete from your bucket
+  if (!process.env.REMOTE_FILES_SECRET) {
+    return response.status(500).json({error: 'REMOTE_FILES_SECRET is not configured'})
+  }
+  if (request.headers.authorization !== `Bearer ${process.env.REMOTE_FILES_SECRET}`) {
     return response.status(401).json({error: 'Unauthorized'})
   }
-  next()
+
+  return next()
 })
 
 app.post('/upload', upload.single('file'), async (request, response) => {
   if (!request.file) return response.status(400).json({error: 'Missing file'})
+  if (!isAllowedContentType(request.file.mimetype)) {
+    return response.status(415).json({error: `Content type "${request.file.mimetype}" is not allowed`})
+  }
+
   const bucket = required('AWS_BUCKET')
   const publicUrl = required('PUBLIC_URL').replace(/\/$/, '')
   const key = `${safePrefix(process.env.UPLOAD_PREFIX || '')}${Date.now()}-${safeName(request.file.originalname)}`
@@ -31,7 +49,7 @@ app.post('/upload', upload.single('file'), async (request, response) => {
     ContentType: request.file.mimetype,
   }))
 
-  response.json({
+  return response.json({
     key,
     url: `${publicUrl}/${key}`,
     filename: request.file.originalname,
@@ -53,6 +71,16 @@ function required(name: string) {
   const value = process.env[name]
   if (!value) throw new Error(`Missing ${name}`)
   return value
+}
+
+/** Accepts `video/mp4` and `video/*` entries. Empty config allows everything. */
+function isAllowedContentType(contentType: string) {
+  const rules = (process.env.ALLOWED_CONTENT_TYPES || '').split(',').map((item) => item.trim()).filter(Boolean)
+  if (!rules.length) return true
+
+  return rules.some((rule) =>
+    rule.endsWith('/*') ? contentType.startsWith(rule.slice(0, -1)) : contentType === rule,
+  )
 }
 
 function safeName(name: string) {
