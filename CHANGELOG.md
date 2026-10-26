@@ -1,3 +1,11 @@
+# [1.1.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v1.0.0...v1.1.0) (2026-10-26)
+
+
+### Features
+
+* filter files by document usage and show file counts ([b7ec4a5](https://github.com/flayks/sanity-plugin-remote-files/commit/b7ec4a56f2d84649dbc1e3d5ddbb095488dcdb61))
+* show the document count in the used by tab ([155b4c8](https://github.com/flayks/sanity-plugin-remote-files/commit/155b4c86ece5167f8ae19728bcc399a3044292c4))
+
 # [1.0.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v0.3.2...v1.0.0) (2026-09-12)
 
 
