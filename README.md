@@ -6,14 +6,15 @@
   Useful for large videos, audio files, archives, PDFs or any file you want to keep in R2, S3 or another storage backend.
 </p>
 
-<img width="1920" height="1080" alt="sanity plugin remote files" src="https://github.com/user-attachments/assets/bf795192-fb02-4d48-a95b-7d356ed19be0" />
+<img width="1920" height="1080" alt="sanity plugin remote files" src="https://github.com/user-attachments/assets/14e9cb15-15da-4a3e-ad51-cef0bef4da61" />
 
 ## Features
 
 - **Remote files tool**: Browse, search, upload and manage your remote file library.
+- **Usage filter**: Show all files, the ones used in documents or the unused ones, with a count for each.
 - **`remoteFile` field type**: Upload or select remote files directly from document fields.
 - **Playable previews**: Play audio and video straight from the field, without opening the details dialog.
-- **File details dialog**: Preview files, edit internal titles, inspect metadata and see which documents use a file.
+- **File details dialog**: Preview files, edit internal titles, inspect metadata and see how many and which documents use a file.
 - **Cloudflare R2 provider**: Worker-backed upload/delete flow with an interactive setup command.
 - **S3-compatible provider**: Express API template for S3 or S3-compatible storage.
 - **Flexible providers**: Use the bundled R2/S3 providers or add your own.
