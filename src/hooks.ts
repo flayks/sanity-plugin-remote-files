@@ -12,18 +12,11 @@ export type UploadProgress = {
   stage: 'uploading' | 'saving'
 }
 
-/**
- * GROQ projection shared by the browser and field input.
- * Keep in sync with the `remoteFiles.file` schema fields.
- */
+/** Keep in sync with the `remoteFiles.file` schema fields */
 export const REMOTE_FILE_PROJECTION =
   '{_id, _type, title, description, poster, "posterUrl": poster.asset->url, filename, key, url, provider, contentType, duration, height, size, uploadedAt, width}'
 
-/**
- * Upload a file to the provider and create a Sanity document for it.
- * Handles upload, metadata extraction, document creation, and toast feedback.
- * Returns the created document (or undefined on failure).
- */
+/** Uploads, creates the file doc and toasts the result */
 export function useRemoteFileUpload(provider?: RemoteFilesProvider) {
   const client = useClient({apiVersion: '2025-01-01'})
   const toast = useToast()
@@ -40,7 +33,7 @@ export function useRemoteFileUpload(provider?: RemoteFilesProvider) {
       stage: 'uploading',
     })
     try {
-      // Upload to provider and extract client-side metadata in parallel
+      // Uploads and reads local metadata in parallel
       const [result, metadata] = await Promise.all([
         uploadRemoteFile(provider, file, (progress) => {
           setUploadProgress({fileName: file.name, progress, stage: 'uploading'})

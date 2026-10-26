@@ -1,26 +1,21 @@
 import type {RemoteFilesProvider} from '../types'
 import {createRemoteFilesProvider} from './createProvider'
 
-/**
- * Config for the Cloudflare R2 provider.
- * `endpoint` is your Worker URL (handles upload/delete with R2 credentials).
- * `publicUrl` is the R2 public bucket URL for serving files.
- * `headers` is optional auth (e.g. `authorization: Bearer <token>`).
- */
 /** @public */
 export type CloudflareR2ProviderConfig = Omit<
   RemoteFilesProvider,
   'title' | 'endpoint' | 'uploadFile' | 'deleteFile' | 'uploadFields'
 > & {
+  /** Worker URL, it holds the R2 binding */
   endpoint: string
   title?: string
+  /** Key prefix for uploads, e.g. `videos` */
   uploadPrefix?: string
 }
 
 /**
- * Cloudflare R2 provider, accessed via a Cloudflare Worker proxy.
- * The Worker handles `POST /upload` and `DELETE /files/:key` using R2 bindings.
- * See `templates/cloudflare-r2-worker/` for a ready-to-deploy Worker.
+ * Cloudflare R2 through a Worker that follows the endpoint contract.
+ * Ready-to-deploy Worker in `templates/cloudflare-r2-worker`.
  */
 /** @public */
 export function cloudflareR2Provider(config: CloudflareR2ProviderConfig): RemoteFilesProvider {

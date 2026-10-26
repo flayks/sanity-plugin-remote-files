@@ -9,14 +9,14 @@ type RemoteFilesToolProps = {
   description: string
 }
 
-/** Bind the tool props configured on the plugin to the tool component. */
+/** Binds the plugin tool options to the tool */
 export function createRemoteFilesTool(props: RemoteFilesToolProps) {
   return function RemoteFilesToolPage() {
     return <RemoteFilesTool {...props} />
   }
 }
 
-/** Studio tool: a full-page browser for managing remote files. */
+/** Full-page Studio tool to manage remote files */
 export function RemoteFilesTool({description, providers, title}: RemoteFilesToolProps) {
   return (
     <Box paddingY={4} paddingX={[4, 5]} sizing="border">

@@ -16,10 +16,7 @@ import {FilePreview} from './FilePreview'
 import {getProvider, useRemoteFilesProviders} from './ProviderContext'
 import {RemoteFilesBrowser} from './RemoteFilesBrowser'
 
-/**
- * Custom input for `remoteFile` fields. Lets editors upload a new file,
- * select an existing one, or remove the current reference.
- */
+/** `remoteFile` input to upload, select or remove a file */
 export function RemoteFileInput(props: RemoteFileInputProps) {
   const {onChange, readOnly, schemaType, value} = props
   const client = useClient({apiVersion: '2025-01-01'})

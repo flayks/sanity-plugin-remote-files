@@ -1,17 +1,12 @@
 /**
- * Storage providers.
+ * Storage providers, one factory per file.
+ * To add one, follow `cloudflareR2.ts`, then export it here and from `../index.ts`.
  *
- * Each provider lives in its own file and exports a factory function.
- * To add a new provider, create a file here following `cloudflareR2.ts`,
- * then export it below and from `../index.ts`.
+ * Default endpoint contract, also in the README:
+ *   POST   /upload      multipart/form-data with a `file` field, returns `UploadResult`
+ *   DELETE /files/:key  removes the stored file
  *
- * R2 and the S3 template both use the default HTTP endpoint contract:
- *   POST /upload      — multipart/form-data with a `file` field
- *                       returns `{ key, url, filename, contentType?, size? }`
- *   DELETE /files/:key — removes the file from storage
- *
- * Signed URL providers and custom providers can provide `uploadFile` and
- * `deleteFile` instead. Workers are only required by the bundled R2 template.
+ * Signed URL and custom providers use `uploadFile` and `deleteFile` instead.
  */
 export {createRemoteFilesProvider} from './createProvider'
 export type {RemoteFilesProviderConfig} from './createProvider'

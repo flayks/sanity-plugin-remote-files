@@ -5,10 +5,7 @@ function parseAccept(accept?: string): string[] {
     .filter(Boolean)
 }
 
-/**
- * Matches browser `accept` syntax against a file/content type.
- * Supports MIME types (`video/mp4`), wildcards (`video/*`) and extensions (`.mp4`).
- */
+/** Matches accept rules: `video/mp4`, `video/*` or `.mp4` */
 export function matchesAccept(
   accept: string | undefined,
   file: {contentType?: string; filename?: string; name?: string; type?: string},
@@ -26,11 +23,7 @@ export function matchesAccept(
   })
 }
 
-/**
- * Same rules as a GROQ condition, so the query returns matching files
- * instead of filtering a capped result set in the browser.
- * Returns null for rule sets GROQ can't express, such as extensions.
- */
+/** accept as GROQ before the cap, null for extensions */
 export function acceptToGroq(accept?: string): string | null {
   const rules = parseAccept(accept)
   if (!rules.length || rules.some((rule) => rule === '*/*' || rule.startsWith('.'))) return null
@@ -44,7 +37,7 @@ export function acceptToGroq(accept?: string): string | null {
   return `(${conditions.join(' || ')})`
 }
 
-/** Shared toast for a file the field's `accept` rules reject. */
+/** Toast for a file the `accept` rules reject */
 export function acceptErrorToast(accept?: string) {
   return {
     status: 'error' as const,

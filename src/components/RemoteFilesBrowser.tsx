@@ -48,8 +48,7 @@ function buildFilter(accept?: string) {
     .join(' && ')
 }
 
-// The search clause is only added when there's a term, to avoid
-// referencing the $search param when it's not provided.
+// Search clause only when a term sets $search
 function buildFilesQuery(accept?: string, searching?: boolean, usage?: string) {
   const clauses = [
     buildFilter(accept),
@@ -120,10 +119,7 @@ function UploadProgressDialog({
   )
 }
 
-/**
- * Browser grid for remote files. Used both in the Studio tool
- * and inside the field input's "Select" dialog.
- */
+/** Files grid for the tool and the field Select dialog */
 export function RemoteFilesBrowser({
   accept,
   initialProvider,

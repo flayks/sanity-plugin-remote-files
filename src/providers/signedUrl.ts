@@ -5,13 +5,13 @@ import {createRemoteFilesProvider} from './createProvider'
 /** Response expected from your signed URL endpoint. */
 /** @public */
 export type SignedUploadUrlResult = {
-  /** Short-lived URL used by the browser to upload the file. */
+  /** Short-lived URL the browser uploads to */
   uploadUrl: string
   /** Final object key stored by the provider. */
   key: string
   /** Public/read URL for the uploaded file. */
   url: string
-  /** Optional method for the signed request. Defaults to PUT. */
+  /** Signed request method, PUT by default */
   method?: 'PUT' | 'POST'
   /** Optional headers required by the signed request. */
   headers?: HeadersInit
@@ -22,16 +22,16 @@ export type SignedUrlProviderConfig = Omit<
   RemoteFilesProvider,
   'title' | 'endpoint' | 'uploadFile' | 'deleteFile' | 'uploadFields'
 > & {
+  /** Gets `{filename, contentType, size}`, returns `SignedUploadUrlResult` */
   getUploadUrlEndpoint: string
+  /** Base URL for `DELETE /files/:key` */
   deleteEndpoint: string
   title?: string
 }
 
 /**
- * Generic signed URL provider.
- *
- * Your backend returns a short-lived upload URL. The browser uploads directly
- * to storage with that URL, so storage credentials never enter the Studio.
+ * Browser uploads straight to storage with a short-lived signed URL.
+ * Storage credentials stay in your backend.
  */
 /** @public */
 export function signedUrlProvider(config: SignedUrlProviderConfig): RemoteFilesProvider {

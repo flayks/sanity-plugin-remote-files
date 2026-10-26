@@ -17,7 +17,7 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, {headers})
 
-    // Fail closed: this endpoint writes to and deletes from your bucket
+    // Fail closed: this endpoint writes and deletes bucket files
     if (!env.REMOTE_FILES_SECRET) {
       return json({error: 'REMOTE_FILES_SECRET is not configured'}, 500, headers)
     }
@@ -73,7 +73,7 @@ function corsHeaders(origin: string, allowedOrigins: string) {
     'Access-Control-Allow-Headers': 'authorization, content-type',
     'Access-Control-Allow-Methods': 'OPTIONS, POST, DELETE',
     'Access-Control-Allow-Origin': allowOrigin,
-    // The response body varies per origin, so caches must not share it
+    // Body varies by origin, so caches must not share it
     Vary: 'Origin',
   }
 }
@@ -82,7 +82,7 @@ function json(body: unknown, status: number, headers: HeadersInit) {
   return Response.json(body, {status, headers})
 }
 
-/** Accepts `video/mp4` and `video/*` entries. Empty config allows everything. */
+/** Accepts `video/mp4` and `video/*`, empty allows all */
 function isAllowedContentType(contentType: string, allowedContentTypes?: string) {
   const rules = (allowedContentTypes || '').split(',').map((item) => item.trim()).filter(Boolean)
   if (!rules.length) return true

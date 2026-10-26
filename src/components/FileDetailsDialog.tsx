@@ -44,7 +44,7 @@ type FileDetailsDialogProps = {
   provider?: RemoteFilesProvider
   requirePoster?: boolean
   onClose: () => void
-  /** Called after the document and the stored object are both gone. */
+  /** Called once the doc and the stored file are deleted */
   onDeleted?: (file: RemoteFileDocument) => void
   onSelect?: (file: RemoteFileDocument) => void
   onUpdate?: (file: RemoteFileDocument) => void
@@ -138,11 +138,7 @@ function InfoRow({icon: Icon, label, value}: {icon: IconComponent; label: string
   )
 }
 
-/**
- * Details modal for a file.
- * Shows metadata, lets the editor set an internal title,
- * and provides download/copy/delete/select actions.
- */
+/** File details modal with metadata and file actions */
 export function FileDetailsDialog({
   file,
   initialTab,
@@ -182,8 +178,7 @@ export function FileDetailsDialog({
     if (!isPreviewableVideo(file.contentType)) setActiveTab('details')
   }, [file._id, file.contentType, file.posterUrl, file.title])
 
-  // Best-effort: probe metadata from the remote URL if not stored yet.
-  // If successful, persist it so it doesn't need to be probed again.
+  // Probes missing metadata from the URL and saves it
   useEffect(() => {
     let cancelled = false
     // Resets to the stored values when another file is opened
@@ -220,7 +215,7 @@ export function FileDetailsDialog({
         const updated = await client.patch(file._id).set(patch).commit<RemoteFileDocument>()
         onUpdate?.({...updated, posterUrl: file.posterUrl})
       } catch {
-        // Metadata is best-effort — the UI can still show computed values.
+        // Metadata is best-effort
       }
     }
     void probe()
@@ -276,7 +271,7 @@ export function FileDetailsDialog({
         .patch(file._id)
         .set({title: title || undefined})
         .commit<RemoteFileDocument>()
-      // `posterUrl` is a projection alias, so commit() never returns it
+      // commit() never returns the `posterUrl` alias
       onUpdate?.({...updated, posterUrl})
       toast.push({status: 'success', title: 'File title saved'})
     } catch (error) {
@@ -365,8 +360,7 @@ export function FileDetailsDialog({
         return
       }
 
-      // Document first: Sanity refuses to delete a referenced document,
-      // and the stored object must survive that refusal
+      // Document first, so a refused delete keeps the object
       await client.delete(file._id)
       await deleteRemoteFile(provider, file)
       onDeleted?.(file)
