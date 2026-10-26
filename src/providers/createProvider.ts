@@ -6,10 +6,8 @@ export type RemoteFilesProviderConfig = Omit<RemoteFilesProvider, 'title'> & {
 }
 
 /**
- * Small guardrail for provider authors.
- *
- * R2/S3 use the default HTTP endpoint flow. A more custom provider can omit
- * `endpoint` only if it provides both `uploadFile` and `deleteFile` handlers.
+ * Base for provider factories: checks the config and sets a default title.
+ * Needs `endpoint`, or both `uploadFile` and `deleteFile`.
  */
 /** @public */
 export function createRemoteFilesProvider(

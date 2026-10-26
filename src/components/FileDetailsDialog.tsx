@@ -44,7 +44,7 @@ type FileDetailsDialogProps = {
   provider?: RemoteFilesProvider
   requirePoster?: boolean
   onClose: () => void
-  /** Called after the document and the stored object are both gone. */
+  /** Called once the doc and the stored file are deleted */
   onDeleted?: (file: RemoteFileDocument) => void
   onSelect?: (file: RemoteFileDocument) => void
   onUpdate?: (file: RemoteFileDocument) => void
@@ -62,7 +62,10 @@ type UsedByDocument = {
 
 type IconComponent = ComponentType<{style?: CSSProperties}>
 
-const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_updatedAt desc) [0...50] {
+const USED_BY_LIMIT = 50
+
+// One extra document tells there are more than the limit
+const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_updatedAt desc) [0...${USED_BY_LIMIT + 1}] {
   _id,
   _type,
   _updatedAt,
@@ -135,11 +138,7 @@ function InfoRow({icon: Icon, label, value}: {icon: IconComponent; label: string
   )
 }
 
-/**
- * Details modal for a file.
- * Shows metadata, lets the editor set an internal title,
- * and provides download/copy/delete/select actions.
- */
+/** File details modal with metadata and file actions */
 export function FileDetailsDialog({
   file,
   initialTab,
@@ -163,12 +162,13 @@ export function FileDetailsDialog({
   const [duration, setDuration] = useState<number | undefined>(file.duration)
   const [height, setHeight] = useState<number | undefined>(file.height)
   const [usedBy, setUsedBy] = useState<UsedByDocument[]>([])
-  const [usedByLoading, setUsedByLoading] = useState(false)
-  const [usedByLoaded, setUsedByLoaded] = useState(false)
+  const [usedByLoading, setUsedByLoading] = useState(true)
   const [width, setWidth] = useState<number | undefined>(file.width)
   const fileInfo = formatFileInfoParts({...file, duration, height, width})
   const isVideo = isPreviewableVideo(file.contentType)
   const isPosterMissing = Boolean(requirePoster && isVideo && !posterUrl)
+  const usedByCount = usedBy.length > USED_BY_LIMIT ? `${USED_BY_LIMIT}+` : usedBy.length
+  const usedByLabel = usedBy.length ? `Used by ${usedByCount}` : 'Not used'
 
   useEffect(() => {
     // Resets the form when another file is opened
@@ -178,8 +178,7 @@ export function FileDetailsDialog({
     if (!isPreviewableVideo(file.contentType)) setActiveTab('details')
   }, [file._id, file.contentType, file.posterUrl, file.title])
 
-  // Best-effort: probe metadata from the remote URL if not stored yet.
-  // If successful, persist it so it doesn't need to be probed again.
+  // Probes missing metadata from the URL and saves it
   useEffect(() => {
     let cancelled = false
     // Resets to the stored values when another file is opened
@@ -216,7 +215,7 @@ export function FileDetailsDialog({
         const updated = await client.patch(file._id).set(patch).commit<RemoteFileDocument>()
         onUpdate?.({...updated, posterUrl: file.posterUrl})
       } catch {
-        // Metadata is best-effort — the UI can still show computed values.
+        // Metadata is best-effort
       }
     }
     void probe()
@@ -237,10 +236,8 @@ export function FileDetailsDialog({
   ])
 
   useEffect(() => {
-    if (activeTab !== 'usedBy' || usedByLoaded) return undefined
-
     let cancelled = false
-    // Opening the tab is what triggers the fetch
+    // Fetched on open so the tab label can show the count
     // oxlint-disable-next-line react/set-state-in-effect
     setUsedByLoading(true)
 
@@ -249,7 +246,6 @@ export function FileDetailsDialog({
         const documents = await client.fetch<UsedByDocument[]>(usedByQuery, {id: file._id})
         if (cancelled) return
         setUsedBy(documents)
-        setUsedByLoaded(true)
       } catch (error) {
         if (cancelled) return
         toast.push({
@@ -266,7 +262,7 @@ export function FileDetailsDialog({
     return () => {
       cancelled = true
     }
-  }, [activeTab, client, file._id, toast, usedByLoaded])
+  }, [client, file._id, toast])
 
   async function handleSave() {
     setSaving(true)
@@ -275,7 +271,7 @@ export function FileDetailsDialog({
         .patch(file._id)
         .set({title: title || undefined})
         .commit<RemoteFileDocument>()
-      // `posterUrl` is a projection alias, so commit() never returns it
+      // commit() never returns the `posterUrl` alias
       onUpdate?.({...updated, posterUrl})
       toast.push({status: 'success', title: 'File title saved'})
     } catch (error) {
@@ -354,7 +350,6 @@ export function FileDetailsDialog({
         const names = documents.slice(0, 3).map((document) => document.name)
         const rest = documents.length - names.length
         setUsedBy(documents)
-        setUsedByLoaded(true)
         setConfirmDeleteOpen(false)
         setActiveTab('usedBy')
         toast.push({
@@ -365,8 +360,7 @@ export function FileDetailsDialog({
         return
       }
 
-      // Document first: Sanity refuses to delete a referenced document,
-      // and the stored object must survive that refusal
+      // Document first, so a refused delete keeps the object
       await client.delete(file._id)
       await deleteRemoteFile(provider, file)
       onDeleted?.(file)
@@ -428,7 +422,7 @@ export function FileDetailsDialog({
               aria-controls="remote-file-used-by-panel"
               icon={LinkIcon}
               id="remote-file-used-by-tab"
-              label="Used by"
+              label={usedByLoading ? undefined : usedByLabel}
               onClick={() => setActiveTab('usedBy')}
               selected={activeTab === 'usedBy'}
             />
@@ -595,7 +589,7 @@ export function FileDetailsDialog({
                 </Card>
               ) : usedBy.length ? (
                 <Stack gap={2}>
-                  {usedBy.map((document) => (
+                  {usedBy.slice(0, USED_BY_LIMIT).map((document) => (
                     <IntentLink
                       intent="edit"
                       key={document._id}

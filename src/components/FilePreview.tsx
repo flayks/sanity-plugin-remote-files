@@ -12,7 +12,7 @@ type FilePreviewProps = {
   fit?: 'cover' | 'contain'
 }
 
-/** Renders an inline preview for the file: image, video, or a fallback icon. */
+/** Image, video or audio preview, else a fallback icon */
 export function FilePreview({controls, file, fit = 'cover', height = 160}: FilePreviewProps) {
   const background = fit === 'contain' ? '#f1f3f6' : undefined
 

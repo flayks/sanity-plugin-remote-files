@@ -3,7 +3,7 @@ import {ImageIcon} from '@sanity/icons/Image'
 import {PlayIcon} from '@sanity/icons/Play'
 import {VideoIcon} from '@sanity/icons/Video'
 
-/** Human-readable byte size, e.g. `6.12 MB` or `645.3 KB`. */
+/** Byte size, e.g. `6.12 MB` or `645.3 KB` */
 export function formatBytes(value?: number): string {
   if (!Number.isFinite(value) || !value) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -14,7 +14,7 @@ export function formatBytes(value?: number): string {
   return `${amount.toFixed(decimals)} ${units[index]}`
 }
 
-/** Short locale date and time, e.g. `Jul 6, 2026, 2:30 PM`. */
+/** Locale date and time, e.g. `Jul 6, 2026, 2:30 PM` */
 export function formatDate(value?: string): string {
   if (!value) return 'Unknown date'
   return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(
@@ -22,10 +22,7 @@ export function formatDate(value?: string): string {
   )
 }
 
-/**
- * Duration in `M:SS` or `H:MM:SS` format.
- * Returns undefined for falsy/non-finite values so callers can skip rendering.
- */
+/** `M:SS` or `H:MM:SS`, undefined so callers skip it */
 export function formatDuration(value?: number): string | undefined {
   if (!Number.isFinite(value) || !value) return undefined
   const totalSeconds = Math.round(value)
@@ -46,7 +43,7 @@ type FileInfoValue = {
   width?: number
 }
 
-/** Formatted file metadata parts used by cards and one-line summaries. */
+/** Metadata parts for cards and one-line summaries */
 export function formatFileInfoParts(file: FileInfoValue) {
   return {
     contentType: file.contentType || 'Remote file',
@@ -57,7 +54,7 @@ export function formatFileInfoParts(file: FileInfoValue) {
   }
 }
 
-/** One-line file metadata, e.g. `video/mp4 · 0:07 · 1920 x 1080 · 6.1 MB · Jul 6, 2026, 9:37 PM`. */
+/** Metadata line, e.g. `video/mp4 · 0:07 · 6.1 MB` */
 export function formatFileInfo(file: FileInfoValue): string {
   const info = formatFileInfoParts(file)
 
@@ -66,7 +63,7 @@ export function formatFileInfo(file: FileInfoValue): string {
     .join(' · ')
 }
 
-/** Icon standing in for the file kind, used by the document previews. */
+/** File kind icon for document previews */
 export function getFileIcon(contentType?: string) {
   if (isPreviewableImage(contentType)) return ImageIcon
   if (isPreviewableVideo(contentType)) return VideoIcon

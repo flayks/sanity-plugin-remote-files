@@ -19,10 +19,7 @@ function isMedia(contentType?: string): boolean {
   return Boolean(isVideo(contentType) || contentType?.startsWith('audio/'))
 }
 
-/**
- * Internal helper: probe image/video/audio intrinsic metadata.
- * Works with both object URLs (local File) and remote URLs (existing files).
- */
+/** Probes media size and duration, local or remote URL */
 function probeMetadata(src: string, contentType?: string): Promise<FileMetadata> {
   return new Promise((resolve) => {
     if (isImage(contentType)) {
@@ -61,10 +58,7 @@ function probeMetadata(src: string, contentType?: string): Promise<FileMetadata>
   })
 }
 
-/**
- * Extract metadata from a local File before upload.
- * Creates a temporary object URL, probes it, then revokes.
- */
+/** Local file metadata via a temporary object URL */
 export async function getFileMetadata(file: File): Promise<FileMetadata> {
   if (!isImage(file.type) && !isMedia(file.type)) return {}
   const url = URL.createObjectURL(file)
@@ -75,10 +69,7 @@ export async function getFileMetadata(file: File): Promise<FileMetadata> {
   }
 }
 
-/**
- * Fetch metadata from a remote URL for existing files that don't have stored
- * metadata yet. Best-effort — returns an empty object on failure.
- */
+/** Remote file metadata, empty object on failure */
 export function getRemoteMetadata(url: string, contentType?: string): Promise<FileMetadata> {
   return probeMetadata(url, contentType)
 }

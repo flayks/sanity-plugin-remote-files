@@ -3,13 +3,10 @@ import type {LayoutProps} from 'sanity'
 
 import type {RemoteFilesProvider} from '../types'
 
-/**
- * Context providing the configured providers to the field input and tool.
- * Set up by the plugin's `studio.components.layout` wrapper in `index.ts`.
- */
+/** Providers for the input and tool, set by the layout */
 export const ProviderContext = createContext<RemoteFilesProvider[]>([])
 
-/** Studio layout wrapper exposing the configured providers. */
+/** Studio layout that provides the configured providers */
 export function createProviderLayout(providers: RemoteFilesProvider[]) {
   return function ProviderLayout(props: LayoutProps) {
     return (

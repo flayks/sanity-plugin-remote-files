@@ -11,11 +11,7 @@ function isVideoDocument(document: unknown) {
   return typeof contentType === 'string' && contentType.startsWith('video/')
 }
 
-/**
- * Document type for each uploaded remote file.
- * Stores metadata only — the actual file lives in the provider's storage.
- * Referenced by `remoteFile` fields via a standard Sanity reference.
- */
+/** Metadata doc per file, referenced by `remoteFile` fields */
 export const remoteFileDocument = defineType({
   name: 'remoteFiles.file',
   title: 'Remote file',
@@ -89,11 +85,7 @@ export const remoteFileDocument = defineType({
   },
 })
 
-/**
- * Object field type used in document schemas. Renders a custom input
- * that lets editors upload or pick a remote file, storing a reference
- * to the corresponding `remoteFiles.file` document.
- */
+/** Field to upload or pick a file, stored as a reference */
 export const remoteFileType = defineType({
   name: 'remoteFile',
   title: 'Remote file',

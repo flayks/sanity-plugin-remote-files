@@ -1,25 +1,19 @@
 import type {RemoteFilesProvider} from '../types'
 import {createRemoteFilesProvider} from './createProvider'
 
-/**
- * Config for the S3 provider.
- * `endpoint` is your API URL (handles upload/delete with AWS credentials).
- * `publicUrl` is the bucket URL for serving files.
- * `headers` is optional auth (e.g. `authorization: Bearer <token>`).
- */
 /** @public */
 export type S3ProviderConfig = Omit<
   RemoteFilesProvider,
   'title' | 'endpoint' | 'uploadFile' | 'deleteFile'
 > & {
+  /** API URL, it holds the AWS credentials */
   endpoint: string
   title?: string
 }
 
 /**
- * S3-compatible provider, accessed via a small Express API.
- * The API handles `POST /upload` and `DELETE /files/:key` using the AWS SDK.
- * See `templates/s3-express/` for a ready-to-deploy API.
+ * S3-compatible storage through an API that follows the endpoint contract.
+ * Ready-to-deploy Express API in `templates/s3-express`.
  */
 /** @public */
 export function s3Provider(config: S3ProviderConfig): RemoteFilesProvider {

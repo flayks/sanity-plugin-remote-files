@@ -16,10 +16,7 @@ type XhrUploadOptions = {
   label: string
 }
 
-/**
- * Upload a body with XMLHttpRequest, which unlike fetch() reports progress.
- * Rejects on every terminal state, so a stalled request can never hang the UI.
- */
+/** XHR for upload progress, rejects on every end state */
 export function xhrUpload({
   url,
   body,
@@ -60,7 +57,7 @@ export function xhrUpload({
   })
 }
 
-/** `DELETE <endpoint>/files/:key`, shared by the endpoint and signed URL flows. */
+/** `DELETE <endpoint>/files/:key`, also for signed URLs */
 export async function deleteAtEndpoint(endpoint: string, key: string, headers?: HeadersInit) {
   const base = endpoint.replace(/\/$/, '')
   const response = await fetch(`${base}/files/${encodeURIComponent(key)}`, {
@@ -90,9 +87,8 @@ function getPublicUrl(provider: RemoteFilesProvider, key: string, fallback: stri
 }
 
 /**
- * Upload a file to the provider's endpoint.
- * The endpoint must accept multipart/form-data with a `file` field
- * and return `{ key, url, filename, contentType?, size?, duration?, width?, height? }`.
+ * Uses the provider's `uploadFile`, else `POST <endpoint>/upload`
+ * as multipart with a `file` field. The response is an `UploadResult`.
  */
 export async function uploadRemoteFile(
   provider: RemoteFilesProvider,
@@ -127,17 +123,14 @@ export async function uploadRemoteFile(
   return {
     ...result,
     url: getPublicUrl(provider, result.key, result.url),
-    // Fall back to client-side values if the endpoint omits them
+    // Client-side values when the endpoint omits them
     contentType: result.contentType || file.type,
     filename: result.filename || file.name,
     size: result.size || file.size,
   }
 }
 
-/**
- * Delete a file from the provider's endpoint.
- * The endpoint must accept `DELETE /files/:key`.
- */
+/** Uses the provider's `deleteFile`, else `DELETE <endpoint>/files/:key` */
 export async function deleteRemoteFile(
   provider: RemoteFilesProvider,
   file: RemoteFileDocument,

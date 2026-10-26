@@ -1,19 +1,13 @@
 import type {ObjectInputProps, ReferenceValue} from 'sanity'
 
-/**
- * Value stored on a `remoteFile` field in a document.
- * It's a thin reference to a `remoteFiles.file` document.
- */
+/** Field value: a reference to a `remoteFiles.file` doc */
 /** @public */
 export type RemoteFileValue = {
   _type?: 'remoteFile'
   asset?: ReferenceValue
 }
 
-/**
- * A `remoteFiles.file` document — metadata only.
- * The actual file lives in the provider's storage (R2, S3, etc.).
- */
+/** File metadata doc, the file itself is in provider storage */
 /** @public */
 export type RemoteFileDocument = {
   _id: string
@@ -37,10 +31,15 @@ export type RemoteFileDocument = {
   width?: number
 }
 
-/** Response from the provider's `POST /upload` endpoint. */
+/**
+ * Response of `POST /upload` or `uploadFile`.
+ * Missing type, size and media metadata are read from the local file.
+ */
 /** @public */
 export type UploadResult = {
+  /** Storage key, used later to delete the file */
   key: string
+  /** Public URL, rebuilt from `publicUrl` when set */
   url: string
   filename: string
   contentType?: string
@@ -50,7 +49,7 @@ export type UploadResult = {
   width?: number
 }
 
-/** Upload progress callback, used by providers that can report browser upload progress. */
+/** Upload progress callback, from 0 to 100 */
 /** @public */
 export type RemoteFileUploadProgress = (progress: number) => void
 
@@ -60,35 +59,46 @@ export type RemoteFileUploadContext = {
   onProgress?: RemoteFileUploadProgress
 }
 
-/** Upload implementation for providers that need custom client-side logic. */
+/**
+ * Custom client-side upload, replaces `POST <endpoint>/upload`.
+ * Call `context.onProgress` to show a progress bar.
+ */
 /** @public */
 export type RemoteFileUploadHandler = (
   file: File,
   context: RemoteFileUploadContext,
 ) => Promise<UploadResult>
 
-/** Delete implementation for providers that need custom client-side logic. */
+/**
+ * Custom client-side delete, replaces `DELETE <endpoint>/files/:key`.
+ * Runs after the Sanity document is deleted.
+ */
 /** @public */
 export type RemoteFileDeleteHandler = (file: RemoteFileDocument) => Promise<void>
 
 /**
- * A storage provider.
+ * Storage provider. It talks to storage in one of these ways:
+ * - `endpoint` with the default HTTP contract (see the README)
+ * - `signedUrlProvider()`, the browser uploads to a signed URL
+ * - custom `uploadFile` and `deleteFile` handlers
  *
- * Providers can use the default HTTP contract (`endpoint`), a signed URL
- * helper, or fully custom `uploadFile`/`deleteFile` handlers.
- *
- * Keep secrets in the backend. Anything in this config is bundled into Studio.
+ * This config is bundled into Studio, keep secrets in the backend.
  */
 /** @public */
 export type RemoteFilesProvider = {
+  /** Unique id, stored on each file document */
   id: string
+  /** Name in the provider select */
   title: string
+  /** Base URL for `POST /upload` and `DELETE /files/:key` */
   endpoint?: string
+  /** Base URL that serves files by key, replaces the returned url */
   publicUrl?: string
+  /** Sent with every request, e.g. an authorization header */
   headers?: HeadersInit
-  /** Extra form fields sent with the default HTTP upload request. */
+  /** Extra form fields for the default upload request */
   uploadFields?: Record<string, string>
-  /** Upload timeout in milliseconds. No timeout by default. */
+  /** Upload timeout in ms, none by default */
   timeout?: number
   uploadFile?: RemoteFileUploadHandler
   deleteFile?: RemoteFileDeleteHandler
@@ -99,7 +109,7 @@ export type RemoteFilesProvider = {
 export type RemoteFileFieldOptions = {
   accept?: string
   provider?: string
-  /** Require a poster image when this field references a video file. */
+  /** Require a poster when the file is a video */
   requirePoster?: boolean
 }
 

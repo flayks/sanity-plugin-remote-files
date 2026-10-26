@@ -17,11 +17,11 @@ app.use((request, response, next) => {
   if (allowOrigin) response.setHeader('Access-Control-Allow-Origin', allowOrigin)
   response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type')
   response.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, DELETE')
-  // The response body varies per origin, so caches must not share it
+  // Body varies by origin, so caches must not share it
   response.setHeader('Vary', 'Origin')
   if (request.method === 'OPTIONS') return response.sendStatus(204)
 
-  // Fail closed: these routes write to and delete from your bucket
+  // Fail closed: these routes write and delete bucket files
   if (!process.env.REMOTE_FILES_SECRET) {
     return response.status(500).json({error: 'REMOTE_FILES_SECRET is not configured'})
   }
@@ -73,7 +73,7 @@ function required(name: string) {
   return value
 }
 
-/** Accepts `video/mp4` and `video/*` entries. Empty config allows everything. */
+/** Accepts `video/mp4` and `video/*`, empty allows all */
 function isAllowedContentType(contentType: string) {
   const rules = (process.env.ALLOWED_CONTENT_TYPES || '').split(',').map((item) => item.trim()).filter(Boolean)
   if (!rules.length) return true

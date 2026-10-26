@@ -44,10 +44,7 @@ export type {
 export type {SignedUploadUrlResult, SignedUrlProviderConfig} from './providers/index'
 
 /**
- * Remote files plugin for Sanity Studio.
- *
- * Files live in your storage provider (Cloudflare R2, S3, etc.);
- * Sanity stores lightweight metadata documents and field references.
+ * Files in your storage, metadata docs and references in Sanity
  *
  * @example
  * ```ts
@@ -79,8 +76,7 @@ export const remoteFiles = definePlugin<RemoteFilesPluginConfig>((config) => {
     schema: {
       types: [remoteFileDocument, remoteFileType],
     },
-    // Wrap the Studio layout with a context provider so the field input
-    // and tool can access the configured providers without prop drilling.
+    // Layout context gives providers to the input and tool
     studio: {
       components: {
         layout: createProviderLayout(providers),
