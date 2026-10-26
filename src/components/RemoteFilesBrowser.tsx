@@ -33,19 +33,40 @@ type RemoteFilesBrowserProps = {
   selectedFileId?: string
 }
 
-const FILE_LIMIT = 200
+type FileCounts = {all: number; used: number}
 
-// The search clause is only added when there's a term, to avoid
-// referencing the $search param when it's not provided.
-function buildFilesQuery(accept?: string, searching?: boolean) {
-  const clauses = [
+const FILE_LIMIT = 200
+const USED_CLAUSE = 'count(*[_type != "remoteFiles.file" && references(^._id)]) > 0'
+
+function buildFilter(accept?: string) {
+  return [
     '_type == "remoteFiles.file"',
     '(!defined($provider) || provider == $provider)',
     acceptToGroq(accept),
+  ]
+    .filter(Boolean)
+    .join(' && ')
+}
+
+// The search clause is only added when there's a term, to avoid
+// referencing the $search param when it's not provided.
+function buildFilesQuery(accept?: string, searching?: boolean, usage?: string) {
+  const clauses = [
+    buildFilter(accept),
     searching ? '(filename match $search || title match $search)' : null,
+    usage === 'used' ? USED_CLAUSE : usage === 'unused' ? `!(${USED_CLAUSE})` : null,
   ].filter(Boolean)
 
   return `*[${clauses.join(' && ')}] | order(uploadedAt desc) [0...${FILE_LIMIT}] ${REMOTE_FILE_PROJECTION}`
+}
+
+function buildCountsQuery(accept?: string) {
+  const filter = buildFilter(accept)
+  return `{"all": count(*[${filter}]), "used": count(*[${filter} && ${USED_CLAUSE}])}`
+}
+
+function withCount(label: string, count?: number) {
+  return count === undefined ? label : `${label} (${count})`
 }
 
 function UploadProgressDialog({
@@ -118,6 +139,8 @@ export function RemoteFilesBrowser({
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<RemoteFileDocument | null>(null)
   const [search, setSearch] = useState('')
+  const [usage, setUsage] = useState('all')
+  const [counts, setCounts] = useState<FileCounts>()
   const [providerId, setProviderId] = useState(initialProvider || providers[0]?.id || '')
   const provider = useMemo(() => getProvider(providers, providerId), [providerId, providers])
   const {upload, uploading, uploadProgress} = useRemoteFileUpload(provider)
@@ -128,7 +151,7 @@ export function RemoteFilesBrowser({
       try {
         const wildcard = search.trim() ? `${search.trim()}*` : null
         const nextFiles = await client.fetch<RemoteFileDocument[]>(
-          buildFilesQuery(accept, Boolean(wildcard)),
+          buildFilesQuery(accept, Boolean(wildcard), usage),
           {provider: provider?.id || null, ...(wildcard ? {search: wildcard} : {})},
         )
         if (isStale()) return
@@ -148,7 +171,7 @@ export function RemoteFilesBrowser({
         if (!isStale()) setLoading(false)
       }
     },
-    [accept, client, provider, search, toast],
+    [accept, client, provider, search, toast, usage],
   )
 
   useEffect(() => {
@@ -160,6 +183,29 @@ export function RemoteFilesBrowser({
     }
   }, [loadFiles])
 
+  // Not tied to search, so typing does not recount
+  useEffect(() => {
+    let cancelled = false
+    const loadCounts = async () => {
+      try {
+        const nextCounts = await client.fetch<FileCounts>(buildCountsQuery(accept), {
+          provider: provider?.id || null,
+        })
+        if (!cancelled) setCounts(nextCounts)
+      } catch {
+        // Labels fall back to no counts
+      }
+    }
+    void loadCounts()
+    return () => {
+      cancelled = true
+    }
+  }, [accept, client, provider])
+
+  function addToCount(amount: number) {
+    setCounts((current) => current && {...current, all: current.all + amount})
+  }
+
   async function handleUpload(file: File) {
     if (!matchesAccept(accept, file)) {
       toast.push(acceptErrorToast(accept))
@@ -169,12 +215,14 @@ export function RemoteFilesBrowser({
     const document = await upload(file)
     if (document) {
       setFiles((current) => [document, ...current])
+      addToCount(1)
       onSelect?.(document)
     }
   }
 
   function handleDeleted(file: RemoteFileDocument) {
     setFiles((current) => current.filter((item) => item._id !== file._id))
+    addToCount(-1)
   }
 
   function handleUpdate(file: RemoteFileDocument) {
@@ -192,9 +240,18 @@ export function RemoteFilesBrowser({
               icon={SearchIcon}
               onChange={(event) => setSearch(event.currentTarget.value)}
               onClear={() => setSearch('')}
-              placeholder="Search files"
+              placeholder={counts ? `Search from ${counts.all} files` : 'Search files'}
               value={search}
             />
+          </Box>
+          <Box style={{minWidth: 160}}>
+            <Select onChange={(event) => setUsage(event.currentTarget.value)} value={usage}>
+              <option value="all">{withCount('All files', counts?.all)}</option>
+              <option value="used">{withCount('Used in documents', counts?.used)}</option>
+              <option value="unused">
+                {withCount('Not used', counts && counts.all - counts.used)}
+              </option>
+            </Select>
           </Box>
           {providers.length > 1 && (
             <Box style={{minWidth: 160}}>
