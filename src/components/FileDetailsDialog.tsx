@@ -62,7 +62,10 @@ type UsedByDocument = {
 
 type IconComponent = ComponentType<{style?: CSSProperties}>
 
-const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_updatedAt desc) [0...50] {
+const USED_BY_LIMIT = 50
+
+// One extra document tells there are more than the limit
+const usedByQuery = `*[_type != "remoteFiles.file" && references($id)] | order(_updatedAt desc) [0...${USED_BY_LIMIT + 1}] {
   _id,
   _type,
   _updatedAt,
@@ -163,12 +166,13 @@ export function FileDetailsDialog({
   const [duration, setDuration] = useState<number | undefined>(file.duration)
   const [height, setHeight] = useState<number | undefined>(file.height)
   const [usedBy, setUsedBy] = useState<UsedByDocument[]>([])
-  const [usedByLoading, setUsedByLoading] = useState(false)
-  const [usedByLoaded, setUsedByLoaded] = useState(false)
+  const [usedByLoading, setUsedByLoading] = useState(true)
   const [width, setWidth] = useState<number | undefined>(file.width)
   const fileInfo = formatFileInfoParts({...file, duration, height, width})
   const isVideo = isPreviewableVideo(file.contentType)
   const isPosterMissing = Boolean(requirePoster && isVideo && !posterUrl)
+  const usedByCount = usedBy.length > USED_BY_LIMIT ? `${USED_BY_LIMIT}+` : usedBy.length
+  const usedByLabel = usedBy.length ? `Used by ${usedByCount}` : 'Not used'
 
   useEffect(() => {
     // Resets the form when another file is opened
@@ -237,10 +241,8 @@ export function FileDetailsDialog({
   ])
 
   useEffect(() => {
-    if (activeTab !== 'usedBy' || usedByLoaded) return undefined
-
     let cancelled = false
-    // Opening the tab is what triggers the fetch
+    // Fetched on open so the tab label can show the count
     // oxlint-disable-next-line react/set-state-in-effect
     setUsedByLoading(true)
 
@@ -249,7 +251,6 @@ export function FileDetailsDialog({
         const documents = await client.fetch<UsedByDocument[]>(usedByQuery, {id: file._id})
         if (cancelled) return
         setUsedBy(documents)
-        setUsedByLoaded(true)
       } catch (error) {
         if (cancelled) return
         toast.push({
@@ -266,7 +267,7 @@ export function FileDetailsDialog({
     return () => {
       cancelled = true
     }
-  }, [activeTab, client, file._id, toast, usedByLoaded])
+  }, [client, file._id, toast])
 
   async function handleSave() {
     setSaving(true)
@@ -354,7 +355,6 @@ export function FileDetailsDialog({
         const names = documents.slice(0, 3).map((document) => document.name)
         const rest = documents.length - names.length
         setUsedBy(documents)
-        setUsedByLoaded(true)
         setConfirmDeleteOpen(false)
         setActiveTab('usedBy')
         toast.push({
@@ -428,7 +428,7 @@ export function FileDetailsDialog({
               aria-controls="remote-file-used-by-panel"
               icon={LinkIcon}
               id="remote-file-used-by-tab"
-              label="Used by"
+              label={usedByLoading ? undefined : usedByLabel}
               onClick={() => setActiveTab('usedBy')}
               selected={activeTab === 'usedBy'}
             />
@@ -595,7 +595,7 @@ export function FileDetailsDialog({
                 </Card>
               ) : usedBy.length ? (
                 <Stack gap={2}>
-                  {usedBy.map((document) => (
+                  {usedBy.slice(0, USED_BY_LIMIT).map((document) => (
                     <IntentLink
                       intent="edit"
                       key={document._id}
