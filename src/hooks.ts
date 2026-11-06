@@ -2,7 +2,7 @@ import {useToast} from '@sanity/ui/toast'
 import {useState} from 'react'
 import {useClient} from 'sanity'
 
-import {uploadRemoteFile} from './api'
+import {endpointHeaders, uploadRemoteFile} from './api'
 import {getFileMetadata} from './metadata'
 import type {RemoteFileDocument, RemoteFilesProvider} from './types'
 
@@ -33,9 +33,11 @@ export function useRemoteFileUpload(provider?: RemoteFilesProvider) {
       stage: 'uploading',
     })
     try {
+      const headers = endpointHeaders(provider, client.config().token)
+
       // Uploads and reads local metadata in parallel
       const [result, metadata] = await Promise.all([
-        uploadRemoteFile(provider, file, (progress) => {
+        uploadRemoteFile(provider, file, headers, (progress) => {
           setUploadProgress({fileName: file.name, progress, stage: 'uploading'})
         }),
         getFileMetadata(file),

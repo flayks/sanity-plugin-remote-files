@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import {execFileSync, spawnSync} from 'node:child_process'
-import {randomBytes} from 'node:crypto'
 import {cpSync, existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs'
 import {dirname, join, resolve} from 'node:path'
 import {createInterface} from 'node:readline/promises'
@@ -212,15 +211,20 @@ async function setupR2(target) {
 
   const origins = await input('Allowed origins (comma-separated):', 'http://localhost:3333')
   const uploadPrefix = await input('Upload prefix:', '')
+  const projectId = await input('Sanity project ID:')
+  if (!projectId) fail('Sanity project ID is required: the Worker refuses every request without it')
+  const dataset = await input('Sanity dataset:', 'production')
   const wranglerToml = join(target, 'wrangler.toml')
-  writeWorkerConfig(wranglerToml, {bucketName, publicUrl, workerName, origins, uploadPrefix})
-  success(`Config: worker=${workerName}, bucket=${bucketName}`)
-
-  const authSecret = randomBytes(32).toString('hex')
-  run(wrangler, ['--config', wranglerToml, 'secret', 'put', 'REMOTE_FILES_SECRET'], {
-    input: authSecret,
-    label: 'Saving Worker secret',
+  writeWorkerConfig(wranglerToml, {
+    bucketName,
+    publicUrl,
+    workerName,
+    origins,
+    uploadPrefix,
+    projectId,
+    dataset,
   })
+  success(`Config: worker=${workerName}, bucket=${bucketName}`)
 
   step(5, 'Deploy Worker')
   const deploy = capture(wrangler, ['--config', wranglerToml, 'deploy'], {cwd: target})
@@ -234,18 +238,18 @@ async function setupR2(target) {
   console.log(`${colors.green}${colors.bold}Setup complete${colors.reset}`)
   console.log('')
   console.log(bold('Add to your Sanity config:'))
+  console.log(`auth: {loginMethod: 'token'},`)
   console.log(`cloudflareR2Provider({`)
   console.log(`  id: 'r2',`)
   console.log(`  endpoint: process.env.SANITY_STUDIO_R2_ENDPOINT!,`)
   console.log(`  publicUrl: process.env.SANITY_STUDIO_R2_PUBLIC_URL,`)
   console.log(`  uploadPrefix: '${uploadPrefix}',`)
-  console.log(`  headers: {authorization: \`Bearer \${process.env.SANITY_STUDIO_R2_TOKEN}\`},`)
+  console.log(`  sendUserToken: true,`)
   console.log(`})`)
   console.log('')
   console.log(bold('Values:'))
   console.log(`  SANITY_STUDIO_R2_ENDPOINT=${workerUrl}`)
   console.log(`  SANITY_STUDIO_R2_PUBLIC_URL=${publicUrl}`)
-  console.log(`  SANITY_STUDIO_R2_TOKEN=${authSecret}`)
   console.log('')
 }
 
@@ -268,13 +272,13 @@ function scaffoldTemplate(providerName, target, options = {}) {
       console.log(
         '3. Edit wrangler.toml bucket_name, PUBLIC_URL, ALLOWED_ORIGINS, and UPLOAD_PREFIX',
       )
-      console.log('4. Required: wrangler secret put REMOTE_FILES_SECRET')
+      console.log('4. Required: set SANITY_PROJECT_ID and SANITY_DATASET in wrangler.toml')
       console.log('5. npm run deploy')
     } else {
       console.log('1. cd ' + target)
       console.log('2. npm install')
       console.log('3. Set AWS_REGION, AWS_BUCKET, PUBLIC_URL, ALLOWED_ORIGINS, AWS credentials')
-      console.log('4. Required: set REMOTE_FILES_SECRET')
+      console.log('4. Required: set SANITY_PROJECT_ID and SANITY_DATASET')
       console.log('5. npm run dev or deploy the API to your host')
     }
   }
@@ -298,8 +302,7 @@ function spawnWrangler(wrangler, args, options = {}) {
   return spawnSync(wrangler.cmd, [...wrangler.prefix, ...args], {
     cwd: options.cwd,
     encoding: 'utf8',
-    input: options.input,
-    stdio: options.input ? ['pipe', 'inherit', 'inherit'] : 'inherit',
+    stdio: 'inherit',
     env: process.env,
   })
 }
@@ -360,6 +363,8 @@ function writeWorkerConfig(path, values) {
     .replace(/^PUBLIC_URL = .*/m, `PUBLIC_URL = "${values.publicUrl}"`)
     .replace(/^ALLOWED_ORIGINS = .*/m, `ALLOWED_ORIGINS = "${values.origins}"`)
     .replace(/^UPLOAD_PREFIX = .*/m, `UPLOAD_PREFIX = "${values.uploadPrefix}"`)
+    .replace(/^SANITY_PROJECT_ID = .*/m, `SANITY_PROJECT_ID = "${values.projectId}"`)
+    .replace(/^SANITY_DATASET = .*/m, `SANITY_DATASET = "${values.dataset}"`)
   writeFileSync(path, next)
 }
 

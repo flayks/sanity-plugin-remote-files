@@ -94,8 +94,10 @@ export type RemoteFilesProvider = {
   endpoint?: string
   /** Base URL that serves files by key, replaces the returned url */
   publicUrl?: string
-  /** Sent with every request, e.g. an authorization header */
+  /** Sent with every request, an authorization replaces the user's token */
   headers?: HeadersInit
+  /** Sends the user's Sanity token to `endpoint`, only for backends you trust */
+  sendUserToken?: boolean
   /** Extra form fields for the default upload request */
   uploadFields?: Record<string, string>
   /** Upload timeout in ms, none by default */

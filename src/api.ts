@@ -86,6 +86,21 @@ function getPublicUrl(provider: RemoteFilesProvider, key: string, fallback: stri
   return `${provider.publicUrl.replace(/\/$/, '')}/${key.replace(/^\/+/, '')}`
 }
 
+/** Provider headers, plus the user's token with `sendUserToken` */
+export function endpointHeaders(provider: RemoteFilesProvider, token?: string) {
+  const headers = new Headers(provider.headers)
+  if (!provider.sendUserToken || headers.has('authorization')) return headers
+
+  if (!token) {
+    throw new Error(
+      `Remote files provider "${provider.id}" needs the user's token. Set auth: {loginMethod: 'token'} in the Studio config.`,
+    )
+  }
+
+  headers.set('authorization', `Bearer ${token}`)
+  return headers
+}
+
 /**
  * Uses the provider's `uploadFile`, else `POST <endpoint>/upload`
  * as multipart with a `file` field. The response is an `UploadResult`.
@@ -93,6 +108,7 @@ function getPublicUrl(provider: RemoteFilesProvider, key: string, fallback: stri
 export async function uploadRemoteFile(
   provider: RemoteFilesProvider,
   file: File,
+  headers: HeadersInit,
   onProgress?: RemoteFileUploadProgress,
 ): Promise<UploadResult> {
   if (provider.uploadFile) return provider.uploadFile(file, {onProgress})
@@ -111,7 +127,7 @@ export async function uploadRemoteFile(
   const response = await xhrUpload({
     url: `${endpoint}/upload`,
     body,
-    headers: provider.headers,
+    headers,
     timeout: provider.timeout,
     onProgress,
     label: 'Upload',
@@ -134,6 +150,7 @@ export async function uploadRemoteFile(
 export async function deleteRemoteFile(
   provider: RemoteFilesProvider,
   file: RemoteFileDocument,
+  headers: HeadersInit,
 ): Promise<void> {
   if (provider.deleteFile) return provider.deleteFile(file)
 
@@ -143,5 +160,5 @@ export async function deleteRemoteFile(
     )
   }
 
-  return deleteAtEndpoint(provider.endpoint, file.key, provider.headers)
+  return deleteAtEndpoint(provider.endpoint, file.key, headers)
 }

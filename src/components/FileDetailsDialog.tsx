@@ -32,7 +32,7 @@ import type {ComponentType, CSSProperties} from 'react'
 import {useClient} from 'sanity'
 import {IntentLink} from 'sanity/router'
 
-import {deleteRemoteFile} from '../api'
+import {deleteRemoteFile, endpointHeaders} from '../api'
 import {formatDate, formatFileInfoParts, isPreviewableVideo} from '../format'
 import {getRemoteMetadata} from '../metadata'
 import type {RemoteFileDocument, RemoteFilesProvider} from '../types'
@@ -360,9 +360,12 @@ export function FileDetailsDialog({
         return
       }
 
+      // Throws on a missing token, before the document is deleted
+      const headers = endpointHeaders(provider, client.config().token)
+
       // Document first, so a refused delete keeps the object
       await client.delete(file._id)
-      await deleteRemoteFile(provider, file)
+      await deleteRemoteFile(provider, file, headers)
       onDeleted?.(file)
       toast.push({status: 'success', title: 'File deleted'})
       onClose()

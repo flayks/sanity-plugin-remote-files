@@ -56,7 +56,7 @@ export type {SignedUploadUrlResult, SignedUrlProviderConfig} from './providers/i
  *       id: 'r2',
  *       endpoint: process.env.SANITY_STUDIO_R2_ENDPOINT!,
  *       publicUrl: process.env.SANITY_STUDIO_R2_PUBLIC_URL,
- *       headers: {authorization: `Bearer ${process.env.SANITY_STUDIO_R2_TOKEN}`},
+ *       sendUserToken: true,
  *     }),
  *   ],
  *   tool: {title: 'Videos', description: 'Remote video library.'},

@@ -20,7 +20,7 @@ export type SignedUploadUrlResult = {
 /** @public */
 export type SignedUrlProviderConfig = Omit<
   RemoteFilesProvider,
-  'title' | 'endpoint' | 'uploadFile' | 'deleteFile' | 'uploadFields'
+  'title' | 'endpoint' | 'uploadFile' | 'deleteFile' | 'uploadFields' | 'sendUserToken'
 > & {
   /** Gets `{filename, contentType, size}`, returns `SignedUploadUrlResult` */
   getUploadUrlEndpoint: string
