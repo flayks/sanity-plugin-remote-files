@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v1.1.0...v1.2.0) (2026-11-06)
+
+
+### Features
+
+* authenticate backend requests with the Sanity user token ([f294f63](https://github.com/flayks/sanity-plugin-remote-files/commit/f294f63dc4edfefbeb9126f84933ef56d662ce78))
+
 # [1.1.0](https://github.com/flayks/sanity-plugin-remote-files/compare/v1.0.0...v1.1.0) (2026-10-26)
 
 
