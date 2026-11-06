@@ -46,6 +46,10 @@ import {cloudflareR2Provider, remoteFiles} from 'sanity-plugin-remote-files'
 
 export default defineConfig({
   // ...
+  // lets the plugin send the user's token to provider
+  auth: {
+    loginMethod: 'token',
+  },
   plugins: [
     remoteFiles({
       // configure title and description for specific needs like hosting videos only
@@ -59,9 +63,7 @@ export default defineConfig({
           endpoint: process.env.SANITY_STUDIO_R2_ENDPOINT,
           publicUrl: process.env.SANITY_STUDIO_R2_PUBLIC_URL,
           uploadPrefix: '', // 'uploads', 'videos', 'assets'…
-          headers: {
-            authorization: `Bearer ${process.env.SANITY_STUDIO_R2_TOKEN}`,
-          },
+          sendUserToken: true,
         }),
       ],
     }),
@@ -123,16 +125,22 @@ npx sanity-plugin-remote-files setup s3 remote-files-s3-api
 
 ## Securing the backend
 
-Both templates refuse to start handling requests without `REMOTE_FILES_SECRET`: without it, anyone could upload to or wipe your bucket. The R2 setup command generates and deploys one for you.
+With `sendUserToken: true` and `auth: {loginMethod: 'token'}`, the Studio sends the logged-in user's Sanity token. Both templates accept it only for users allowed to create documents in your dataset, so no secret sits in the Studio bundle. Without `SANITY_PROJECT_ID` or `REMOTE_FILES_SECRET`, every request gets `401`.
 
-| Variable                | Default | Purpose                                                            |
-| ----------------------- | ------- | ------------------------------------------------------------------ |
-| `REMOTE_FILES_SECRET`   | —       | Required bearer token for `POST /upload` and `DELETE /files/:key`. |
-| `ALLOWED_ORIGINS`       | —       | Comma-separated Studio origins allowed by CORS.                    |
-| `MAX_UPLOAD_MB`         | `100`   | Rejects larger uploads with `413`.                                 |
-| `ALLOWED_CONTENT_TYPES` | all     | Comma-separated `video/mp4` or `video/*` entries.                  |
+That token acts as the user on your Sanity project, so only enable `sendUserToken` for a backend you trust, over HTTPS.
 
-The token is passed from the Studio as an `authorization` header, so it is part of the Studio bundle and readable by anyone who can load the Studio. That is fine for a Studio behind a login you control. For a public Studio, use `signedUrlProvider` instead: your backend keeps the credentials and hands out short-lived upload URLs.
+A delete with a user token gets `409` while a `remoteFiles.file` document still has that key. Users who cannot delete the document cannot delete the object either.
+
+| Variable                | Default      | Purpose                                           |
+| ----------------------- | ------------ | ------------------------------------------------- |
+| `SANITY_PROJECT_ID`     | —            | Checks the user's token against your project.     |
+| `SANITY_DATASET`        | `production` | Dataset whose edit rights are checked.            |
+| `REMOTE_FILES_SECRET`   | —            | Optional shared bearer token, see below.          |
+| `ALLOWED_ORIGINS`       | —            | Comma-separated Studio origins allowed by CORS.   |
+| `MAX_UPLOAD_MB`         | `100`        | Rejects larger uploads with `413`.                |
+| `ALLOWED_CONTENT_TYPES` | all          | Comma-separated `video/mp4` or `video/*` entries. |
+
+A provider with its own `headers: {authorization: 'Bearer <secret>'}` sends that instead of the user's token. The secret is then part of the Studio bundle: anyone who can load the Studio can read it and upload or delete files. Only use it behind a login you control.
 
 ## Options
 
